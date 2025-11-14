@@ -1,18 +1,26 @@
 """
-MCP Server with Calculator, Weather, Gold Price, Email, and RAG Tools
+MCP Server with Calculator, Weather, Gold Price, Email, RAG, Code Execution, Web Scraping, and File Operations Tools
 """
 import asyncio
 import json
+import sys
+import io
+import os
+import signal
 from typing import Any
 from datetime import datetime
+from contextlib import redirect_stdout, redirect_stderr
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 from rag_system import get_rag_system
+import urllib.request
+import urllib.error
+from html.parser import HTMLParser
 
 
 class MCPServer:
-    """MCP Server with Calculator, Weather, Gold Price, Email, and RAG tools"""
+    """MCP Server with 8 powerful tools: Calculator, Weather, Gold Price, Email, RAG, Code Execution, Web Scraping, and File Operations"""
 
     def __init__(self):
         self.server = Server("langchain-ollama-mcp")
@@ -125,6 +133,62 @@ class MCPServer:
                         },
                         "required": ["query"]
                     }
+                ),
+                Tool(
+                    name="code_execute",
+                    description="Execute Python code safely and return the output. Useful for calculations, data processing, and quick scripts.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "description": "Python code to execute"
+                            }
+                        },
+                        "required": ["code"]
+                    }
+                ),
+                Tool(
+                    name="web_scrape",
+                    description="Scrape and extract text content from a web page URL",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "The URL to scrape"
+                            },
+                            "extract_links": {
+                                "type": "boolean",
+                                "description": "Whether to extract links from the page (default: false)",
+                                "default": False
+                            }
+                        },
+                        "required": ["url"]
+                    }
+                ),
+                Tool(
+                    name="file_operations",
+                    description="Perform file operations: read, write, list files in directory, or check if file exists",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "operation": {
+                                "type": "string",
+                                "description": "Operation to perform: read, write, list, exists",
+                                "enum": ["read", "write", "list", "exists"]
+                            },
+                            "path": {
+                                "type": "string",
+                                "description": "File or directory path"
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "Content to write (only for write operation)"
+                            }
+                        },
+                        "required": ["operation", "path"]
+                    }
                 )
             ]
 
@@ -142,6 +206,12 @@ class MCPServer:
                 return await self.send_email_tool(arguments)
             elif name == "rag_query":
                 return await self.rag_query_tool(arguments)
+            elif name == "code_execute":
+                return await self.code_execute_tool(arguments)
+            elif name == "web_scrape":
+                return await self.web_scrape_tool(arguments)
+            elif name == "file_operations":
+                return await self.file_operations_tool(arguments)
             else:
                 raise ValueError(f"Unknown tool: {name}")
 
@@ -376,6 +446,284 @@ Metadata: {metadata.get('filename', 'N/A')} | Length: {metadata.get('length', 0)
             return [TextContent(
                 type="text",
                 text=f"❌ Error querying RAG database: {str(e)}"
+            )]
+
+    async def code_execute_tool(self, arguments: dict) -> list[TextContent]:
+        """Code execution tool - safely executes Python code"""
+        code = arguments.get("code", "")
+
+        try:
+            if not code:
+                return [TextContent(
+                    type="text",
+                    text="❌ Error: No code provided"
+                )]
+
+            # Create isolated environment for code execution
+            stdout_buffer = io.StringIO()
+            stderr_buffer = io.StringIO()
+
+            # Restricted global scope
+            restricted_globals = {
+                '__builtins__': {
+                    'print': print,
+                    'len': len,
+                    'range': range,
+                    'str': str,
+                    'int': int,
+                    'float': float,
+                    'bool': bool,
+                    'list': list,
+                    'dict': dict,
+                    'tuple': tuple,
+                    'set': set,
+                    'abs': abs,
+                    'round': round,
+                    'sum': sum,
+                    'min': min,
+                    'max': max,
+                    'sorted': sorted,
+                    'enumerate': enumerate,
+                    'zip': zip,
+                    'map': map,
+                    'filter': filter,
+                    'any': any,
+                    'all': all,
+                }
+            }
+
+            # Execute code with output redirection
+            with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+                exec(code, restricted_globals)
+
+            # Get output
+            stdout_output = stdout_buffer.getvalue()
+            stderr_output = stderr_buffer.getvalue()
+
+            response = "💻 Code Execution Result\n────────────────────────────────\n"
+
+            if stdout_output:
+                response += f"Output:\n{stdout_output}\n"
+
+            if stderr_output:
+                response += f"\n⚠️  Errors/Warnings:\n{stderr_output}\n"
+
+            if not stdout_output and not stderr_output:
+                response += "✅ Code executed successfully (no output)\n"
+
+            response += "────────────────────────────────"
+
+            return [TextContent(
+                type="text",
+                text=response
+            )]
+
+        except SyntaxError as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ Syntax Error: {str(e)}\nLine {e.lineno}: {e.text}"
+            )]
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ Execution Error: {type(e).__name__}: {str(e)}"
+            )]
+
+    async def web_scrape_tool(self, arguments: dict) -> list[TextContent]:
+        """Web scraping tool - extracts text and links from web pages"""
+        url = arguments.get("url", "")
+        extract_links = arguments.get("extract_links", False)
+
+        try:
+            if not url:
+                return [TextContent(
+                    type="text",
+                    text="❌ Error: No URL provided"
+                )]
+
+            # Add user agent to avoid being blocked
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            req = urllib.request.Request(url, headers=headers)
+
+            # Fetch the page
+            with urllib.request.urlopen(req, timeout=10) as response:
+                html_content = response.read().decode('utf-8')
+
+            # Simple HTML parser
+            class SimpleHTMLParser(HTMLParser):
+                def __init__(self):
+                    super().__init__()
+                    self.text = []
+                    self.links = []
+
+                def handle_data(self, data):
+                    text = data.strip()
+                    if text:
+                        self.text.append(text)
+
+                def handle_starttag(self, tag, attrs):
+                    if tag == 'a' and extract_links:
+                        for attr, value in attrs:
+                            if attr == 'href':
+                                self.links.append(value)
+
+            parser = SimpleHTMLParser()
+            parser.feed(html_content)
+
+            # Format response
+            response = f"🌐 Web Scraping Results\n────────────────────────────────\nURL: {url}\n\n"
+
+            # Add text content (limit to first 2000 chars)
+            text_content = ' '.join(parser.text)[:2000]
+            response += f"Content Preview:\n{text_content}\n"
+
+            if len(' '.join(parser.text)) > 2000:
+                response += "\n... (content truncated)\n"
+
+            if extract_links and parser.links:
+                response += f"\n\n🔗 Links Found ({len(parser.links)}):\n"
+                for i, link in enumerate(parser.links[:20], 1):  # Show first 20 links
+                    response += f"{i}. {link}\n"
+
+                if len(parser.links) > 20:
+                    response += f"\n... and {len(parser.links) - 20} more links\n"
+
+            response += "\n────────────────────────────────"
+
+            return [TextContent(
+                type="text",
+                text=response
+            )]
+
+        except urllib.error.HTTPError as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ HTTP Error {e.code}: {e.reason}"
+            )]
+        except urllib.error.URLError as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ URL Error: {str(e.reason)}"
+            )]
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ Scraping Error: {str(e)}"
+            )]
+
+    async def file_operations_tool(self, arguments: dict) -> list[TextContent]:
+        """File operations tool - read, write, list files"""
+        operation = arguments.get("operation", "")
+        path = arguments.get("path", "")
+        content = arguments.get("content", "")
+
+        try:
+            if operation == "read":
+                if not os.path.exists(path):
+                    return [TextContent(
+                        type="text",
+                        text=f"❌ Error: File '{path}' not found"
+                    )]
+
+                with open(path, 'r', encoding='utf-8') as f:
+                    file_content = f.read()
+
+                # Limit output size
+                if len(file_content) > 5000:
+                    file_content = file_content[:5000] + "\n\n... (file truncated, showing first 5000 characters)"
+
+                response = f"📄 File Read Result\n────────────────────────────────\nFile: {path}\n\nContent:\n{file_content}\n────────────────────────────────"
+
+                return [TextContent(
+                    type="text",
+                    text=response
+                )]
+
+            elif operation == "write":
+                if not content:
+                    return [TextContent(
+                        type="text",
+                        text="❌ Error: No content provided to write"
+                    )]
+
+                # Create directory if it doesn't exist
+                os.makedirs(os.path.dirname(path) if os.path.dirname(path) else '.', exist_ok=True)
+
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+
+                response = f"📝 File Write Result\n────────────────────────────────\nFile: {path}\nBytes written: {len(content)}\n✅ File written successfully\n────────────────────────────────"
+
+                return [TextContent(
+                    type="text",
+                    text=response
+                )]
+
+            elif operation == "list":
+                if not os.path.exists(path):
+                    return [TextContent(
+                        type="text",
+                        text=f"❌ Error: Directory '{path}' not found"
+                    )]
+
+                if not os.path.isdir(path):
+                    return [TextContent(
+                        type="text",
+                        text=f"❌ Error: '{path}' is not a directory"
+                    )]
+
+                files = os.listdir(path)
+                files_info = []
+
+                for file in sorted(files):
+                    file_path = os.path.join(path, file)
+                    if os.path.isdir(file_path):
+                        files_info.append(f"📁 {file}/")
+                    else:
+                        size = os.path.getsize(file_path)
+                        files_info.append(f"📄 {file} ({size} bytes)")
+
+                response = f"📂 Directory Listing\n────────────────────────────────\nPath: {path}\nItems: {len(files)}\n\n" + "\n".join(files_info) + "\n────────────────────────────────"
+
+                return [TextContent(
+                    type="text",
+                    text=response
+                )]
+
+            elif operation == "exists":
+                exists = os.path.exists(path)
+                is_file = os.path.isfile(path) if exists else False
+                is_dir = os.path.isdir(path) if exists else False
+
+                response = f"🔍 File Existence Check\n────────────────────────────────\nPath: {path}\nExists: {'✅ Yes' if exists else '❌ No'}\n"
+
+                if exists:
+                    response += f"Type: {'📄 File' if is_file else '📁 Directory' if is_dir else '❓ Other'}\n"
+
+                response += "────────────────────────────────"
+
+                return [TextContent(
+                    type="text",
+                    text=response
+                )]
+
+            else:
+                return [TextContent(
+                    type="text",
+                    text=f"❌ Error: Unknown operation '{operation}'"
+                )]
+
+        except PermissionError:
+            return [TextContent(
+                type="text",
+                text=f"❌ Permission Error: Cannot access '{path}'"
+            )]
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ File Operation Error: {str(e)}"
             )]
 
     async def run(self):

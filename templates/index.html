@@ -5,36 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LangChain + Ollama + MCP - Web Interface</title>
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #4CAF50;
+            --error-color: #f44336;
+            --warning-color: #ff9800;
+            --info-color: #2196F3;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --sidebar-bg: #f8f9fa;
+            --border-color: #e0e0e0;
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            --card-bg: #ffffff;
+            --message-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --primary-gradient: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --sidebar-bg: #2d3748;
+            --border-color: #4a5568;
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            --card-bg: #2d3748;
+            --message-bg: #374151;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            color: var(--text-color);
         }
 
         .container {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
             height: 90vh;
-            background: white;
+            background: var(--bg-color);
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: var(--shadow);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             color: white;
             padding: 25px 30px;
             display: flex;
@@ -77,52 +109,54 @@
         }
 
         .sidebar {
-            width: 280px;
-            background: #f8f9fa;
-            border-right: 2px solid #e0e0e0;
+            width: 320px;
+            background: var(--sidebar-bg);
+            border-right: 2px solid var(--border-color);
             padding: 20px;
             overflow-y: auto;
         }
 
         .sidebar h3 {
             margin-bottom: 15px;
-            color: #333;
+            color: var(--text-color);
             font-size: 1.1em;
         }
 
         .tool-card {
-            background: white;
+            background: var(--card-bg);
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border-color);
             transition: all 0.3s;
             cursor: pointer;
         }
 
         .tool-card:hover {
-            border-color: #667eea;
+            border-color: var(--primary-color);
             transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
         }
 
         .tool-card h4 {
-            color: #667eea;
+            color: var(--primary-color);
             margin-bottom: 8px;
             font-size: 1em;
         }
 
         .tool-card p {
-            color: #666;
+            color: var(--text-color);
+            opacity: 0.8;
             font-size: 0.85em;
             margin-bottom: 8px;
         }
 
         .tool-example {
-            background: #f0f4ff;
+            background: rgba(102, 126, 234, 0.1);
             padding: 8px;
             border-radius: 5px;
             font-size: 0.8em;
-            color: #667eea;
+            color: var(--primary-color);
             font-style: italic;
         }
 
@@ -130,7 +164,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #fafbfc;
+            background: var(--bg-color);
         }
 
         .chat-messages {
@@ -185,14 +219,15 @@
         }
 
         .message-content {
-            background: white;
+            background: var(--message-bg);
             padding: 15px 20px;
             border-radius: 15px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
         }
 
         .message.user .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             color: white;
         }
 
@@ -456,6 +491,124 @@
             background: #f44336;
         }
 
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            color: var(--text-color);
+            padding: 16px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease-out;
+            border-left: 4px solid var(--info-color);
+        }
+
+        .toast.success {
+            border-left-color: var(--success-color);
+        }
+
+        .toast.error {
+            border-left-color: var(--error-color);
+        }
+
+        .toast.warning {
+            border-left-color: var(--warning-color);
+        }
+
+        .toast.info {
+            border-left-color: var(--info-color);
+        }
+
+        .toast-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .toast-message {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1.2em;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle:hover {
+            background: white;
+            color: var(--primary-color);
+            transform: scale(1.05);
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 display: none;
@@ -479,10 +632,16 @@
                     <div class="status-dot"></div>
                     <span>Connected</span>
                 </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+                    <span id="themeIcon">🌙</span>
+                </button>
                 <button class="header-btn" onclick="clearConversation()">🗑️ Clear</button>
                 <button class="header-btn" onclick="window.open('/visualization.html', '_blank')">📊 Visualize</button>
             </div>
         </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
 
         <div class="main-content">
             <div class="sidebar">
@@ -529,9 +688,12 @@
             <div class="chat-container">
                 <div class="chat-messages" id="chatMessages">
                     <div class="welcome-message">
-                        <h2>👋 Welcome to the AI Agent!</h2>
-                        <p>I'm powered by LangChain + Ollama with 5 tools:</p>
-                        <p><strong>Calculator</strong> | <strong>Weather</strong> | <strong>Gold Price</strong> | <strong>Email</strong> | <strong>RAG Search</strong></p>
+                        <h2>👋 Welcome to Your AI Assistant!</h2>
+                        <p style="margin: 10px 0;">Powered by <strong>LangChain + Ollama</strong> with <strong>8 Powerful Tools</strong></p>
+                        <p style="font-size: 0.9em; opacity: 0.9;">
+                            🔢 Calculator | 🌤️ Weather | 💰 Gold Price | 📧 Email<br>
+                            📚 RAG Search | 💻 Code Executor | 🌐 Web Scraper | 📁 File Ops
+                        </p>
 
                         <div class="quick-actions">
                             <button class="quick-action-btn" onclick="sendQuickQuery('What is 25 times 4?')">
@@ -540,14 +702,23 @@
                             <button class="quick-action-btn" onclick="sendQuickQuery('What is the weather in Paris?')">
                                 🌤️ Weather in Paris
                             </button>
-                            <button class="quick-action-btn" onclick="sendQuickQuery('What is the current gold price?')">
+                            <button class="quick-action-btn" onclick="sendQuickQuery('What is the current gold price in EUR?')">
                                 💰 Gold Price
                             </button>
-                            <button class="quick-action-btn" onclick="sendQuickQuery('Send an email to john@example.com')">
-                                📧 Send Email
+                            <button class="quick-action-btn" onclick="sendQuickQuery('Execute Python code: print(sum([1,2,3,4,5]))')">
+                                💻 Run Code
                             </button>
-                            <button class="quick-action-btn" onclick="sendQuickQuery('Search my documents for information about AI')">
-                                📚 Search Documents
+                            <button class="quick-action-btn" onclick="sendQuickQuery('Search my documents for AI')">
+                                📚 Search Docs
+                            </button>
+                            <button class="quick-action-btn" onclick="sendQuickQuery('Scrape https://example.com')">
+                                🌐 Scrape Website
+                            </button>
+                            <button class="quick-action-btn" onclick="sendQuickQuery('List files in current directory')">
+                                📁 List Files
+                            </button>
+                            <button class="quick-action-btn" onclick="sendQuickQuery('Send email to john@example.com')">
+                                📧 Send Email
                             </button>
                         </div>
                     </div>
@@ -575,10 +746,66 @@
         let isInitialized = false;
         let isProcessing = false;
 
+        // Theme Management
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+            showToast('success', 'Theme Changed', `Switched to ${newTheme} mode`);
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Toast Notification System
+        function showToast(type, title, message, duration = 5000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || icons.info}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove after duration
+            setTimeout(() => {
+                toast.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
         // Initialize on page load
         window.addEventListener('load', async () => {
+            loadTheme();
             await initialize();
             loadTools();
+            loadRAGStats();
         });
 
         async function initialize() {
@@ -595,11 +822,12 @@
                 if (data.status === 'success') {
                     isInitialized = true;
                     console.log('Initialized successfully');
+                    showToast('success', 'Connected', 'AI Agent initialized successfully');
                 } else {
-                    showError('Failed to initialize: ' + data.message);
+                    showToast('error', 'Initialization Failed', data.message);
                 }
             } catch (error) {
-                showError('Failed to initialize: ' + error.message);
+                showToast('error', 'Connection Error', 'Failed to initialize: ' + error.message);
             }
         }
 
@@ -663,11 +891,11 @@
                 if (data.status === 'success') {
                     addMessage('assistant', data.response);
                 } else {
-                    showError('Error: ' + data.message);
+                    showToast('error', 'Query Failed', data.message);
                 }
             } catch (error) {
                 removeLoading();
-                showError('Failed to send message: ' + error.message);
+                showToast('error', 'Connection Error', 'Failed to send message: ' + error.message);
             } finally {
                 isProcessing = false;
                 updateUIState();
@@ -733,18 +961,6 @@
             }
         }
 
-        function showError(message) {
-            const messagesContainer = document.getElementById('chatMessages');
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.textContent = message;
-            messagesContainer.appendChild(errorDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-            // Remove after 5 seconds
-            setTimeout(() => errorDiv.remove(), 5000);
-        }
-
         function updateUIState() {
             const sendBtn = document.getElementById('sendBtn');
             const input = document.getElementById('userInput');
@@ -771,9 +987,12 @@
                     const messagesContainer = document.getElementById('chatMessages');
                     messagesContainer.innerHTML = `
                         <div class="welcome-message">
-                            <h2>👋 Welcome to the AI Agent!</h2>
-                            <p>I'm powered by LangChain + Ollama with 5 tools:</p>
-                            <p><strong>Calculator</strong> | <strong>Weather</strong> | <strong>Gold Price</strong> | <strong>Email</strong> | <strong>RAG Search</strong></p>
+                            <h2>👋 Welcome to Your AI Assistant!</h2>
+                            <p style="margin: 10px 0;">Powered by <strong>LangChain + Ollama</strong> with <strong>8 Powerful Tools</strong></p>
+                            <p style="font-size: 0.9em; opacity: 0.9;">
+                                🔢 Calculator | 🌤️ Weather | 💰 Gold Price | 📧 Email<br>
+                                📚 RAG Search | 💻 Code Executor | 🌐 Web Scraper | 📁 File Ops
+                            </p>
 
                             <div class="quick-actions">
                                 <button class="quick-action-btn" onclick="sendQuickQuery('What is 25 times 4?')">
@@ -782,21 +1001,31 @@
                                 <button class="quick-action-btn" onclick="sendQuickQuery('What is the weather in Paris?')">
                                     🌤️ Weather in Paris
                                 </button>
-                                <button class="quick-action-btn" onclick="sendQuickQuery('What is the current gold price?')">
+                                <button class="quick-action-btn" onclick="sendQuickQuery('What is the current gold price in EUR?')">
                                     💰 Gold Price
                                 </button>
-                                <button class="quick-action-btn" onclick="sendQuickQuery('Send an email to john@example.com')">
-                                    📧 Send Email
+                                <button class="quick-action-btn" onclick="sendQuickQuery('Execute Python code: print(sum([1,2,3,4,5]))')">
+                                    💻 Run Code
                                 </button>
-                                <button class="quick-action-btn" onclick="sendQuickQuery('Search my documents for information about AI')">
-                                    📚 Search Documents
+                                <button class="quick-action-btn" onclick="sendQuickQuery('Search my documents for AI')">
+                                    📚 Search Docs
+                                </button>
+                                <button class="quick-action-btn" onclick="sendQuickQuery('Scrape https://example.com')">
+                                    🌐 Scrape Website
+                                </button>
+                                <button class="quick-action-btn" onclick="sendQuickQuery('List files in current directory')">
+                                    📁 List Files
+                                </button>
+                                <button class="quick-action-btn" onclick="sendQuickQuery('Send email to john@example.com')">
+                                    📧 Send Email
                                 </button>
                             </div>
                         </div>
                     `;
+                    showToast('success', 'Conversation Cleared', 'Chat history has been reset');
                 }
             } catch (error) {
-                showError('Failed to clear conversation: ' + error.message);
+                showToast('error', 'Clear Failed', error.message);
             }
         }
 
@@ -830,14 +1059,17 @@
                 if (data.status === 'success') {
                     statusDiv.innerHTML = `<div class="upload-status">✅ ${data.message}<br>Added ${data.chunks_added} chunks</div>`;
                     setTimeout(() => statusDiv.innerHTML = '', 5000);
+                    showToast('success', 'Upload Complete', `Successfully added ${data.chunks_added} chunks to RAG database`);
                     await loadRAGStats();
                 } else {
                     statusDiv.innerHTML = `<div class="upload-status error">❌ ${data.message}</div>`;
                     setTimeout(() => statusDiv.innerHTML = '', 5000);
+                    showToast('error', 'Upload Failed', data.message);
                 }
             } catch (error) {
                 statusDiv.innerHTML = `<div class="upload-status error">❌ Upload failed: ${error.message}</div>`;
                 setTimeout(() => statusDiv.innerHTML = '', 5000);
+                showToast('error', 'Upload Error', error.message);
             }
 
             // Clear file input
@@ -878,12 +1110,13 @@
                     const statusDiv = document.getElementById('uploadStatus');
                     statusDiv.innerHTML = '<div class="upload-status">✅ RAG database cleared</div>';
                     setTimeout(() => statusDiv.innerHTML = '', 3000);
+                    showToast('success', 'Database Cleared', 'All documents removed from RAG database');
                     await loadRAGStats();
                 } else {
-                    alert('Failed to clear RAG database: ' + data.message);
+                    showToast('error', 'Clear Failed', data.message);
                 }
             } catch (error) {
-                alert('Failed to clear RAG database: ' + error.message);
+                showToast('error', 'Error', 'Failed to clear RAG database: ' + error.message);
             }
         }
 
@@ -909,11 +1142,6 @@
                 fileInput.files = files;
                 handleFileUpload({ target: fileInput });
             }
-        });
-
-        // Load RAG stats on page load
-        window.addEventListener('load', () => {
-            loadRAGStats();
         });
     </script>
 </body>

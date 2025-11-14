@@ -6,16 +6,19 @@ A powerful integration combining LangChain, Ollama, and a Model Control Plane (M
 
 - **LangChain Integration**: Leverages LangChain for building LLM applications
 - **Ollama Support**: Uses local Ollama models for privacy and control
-- **MCP Server**: Implements a Model Control Plane with five tools:
+- **MCP Server**: Implements a Model Control Plane with **8 powerful tools**:
   - **Calculator**: Perform arithmetic operations (add, subtract, multiply, divide)
   - **Weather**: Get weather information for any city (mock data for demo)
   - **Gold Price**: Get live market gold prices in multiple currencies (USD, EUR, GBP, INR)
   - **Email**: Send emails with subject and body to recipients
   - **RAG (Retrieval-Augmented Generation)**: Upload documents and query them with semantic search
+  - **Code Execution**: Execute Python code safely with output capture
+  - **Web Scraping**: Extract text and links from web pages
+  - **File Operations**: Read, write, list files and directories
+- **Modern Web Interface**: Beautiful responsive UI with dark mode and toast notifications
 - **Interactive CLI**: User-friendly command-line interface
 - **Demo Mode**: Pre-configured examples to showcase capabilities
 - **Interactive Visualizations**: Two-tab web interface showing step-by-step and animated flows
-- **Web Frontend**: Beautiful chat interface for interacting with the AI agent
 - **Document Intelligence**: RAG system with vector database for document search
 
 ## Architecture
