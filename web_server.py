@@ -2,8 +2,9 @@
 Flask Web Server for LangChain + Ollama + MCP
 Provides a REST API and web interface for interacting with the AI agent
 """
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import asyncio
 import uuid
 from datetime import datetime
@@ -14,13 +15,31 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from langchain_mcp_client import LangChainMCPClient
+from rag_system import get_rag_system, process_uploaded_file
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production'
 CORS(app)
 
+# Configure file uploads
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx', 'json', 'md', 'csv'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Create upload directory if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Initialize RAG system
+rag_system = get_rag_system()
+
 # Store active clients per session
 active_clients = {}
+
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def get_client(session_id):
@@ -206,9 +225,135 @@ def get_tools():
                 'name': 'send_email',
                 'description': 'Send emails to recipients',
                 'example': 'Send an email to john@example.com'
+            },
+            {
+                'name': 'rag_query',
+                'description': 'Search uploaded documents for information',
+                'example': 'What does the document say about AI?'
             }
         ]
     })
+
+
+@app.route('/api/rag/upload', methods=['POST'])
+def upload_document():
+    """Upload a document to the RAG database"""
+    try:
+        # Check if file is present
+        if 'file' not in request.files:
+            return jsonify({
+                'status': 'error',
+                'message': 'No file provided'
+            }), 400
+
+        file = request.files['file']
+
+        # Check if file is selected
+        if file.filename == '':
+            return jsonify({
+                'status': 'error',
+                'message': 'No file selected'
+            }), 400
+
+        # Check if file is allowed
+        if not allowed_file(file.filename):
+            return jsonify({
+                'status': 'error',
+                'message': f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'
+            }), 400
+
+        # Save file
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        # Process file and add to RAG
+        try:
+            chunks = process_uploaded_file(filepath, filename)
+
+            # Add chunks to RAG database
+            metadatas = [{'filename': filename, 'chunk_index': i} for i in range(len(chunks))]
+            doc_ids = rag_system.add_documents_batch(chunks, metadatas)
+
+            # Clean up uploaded file
+            os.remove(filepath)
+
+            return jsonify({
+                'status': 'success',
+                'message': f'Successfully uploaded and processed {filename}',
+                'chunks_added': len(doc_ids),
+                'filename': filename
+            })
+
+        except Exception as e:
+            # Clean up file on error
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            raise e
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/rag/stats', methods=['GET'])
+def get_rag_stats():
+    """Get RAG database statistics"""
+    try:
+        stats = rag_system.get_stats()
+        return jsonify({
+            'status': 'success',
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/rag/documents', methods=['GET'])
+def get_rag_documents():
+    """Get all documents in RAG database"""
+    try:
+        docs = rag_system.get_all_documents()
+        return jsonify({
+            'status': 'success',
+            'documents': {
+                'count': docs['count'],
+                'ids': docs['ids'],
+                'metadatas': docs['metadatas']
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/rag/clear', methods=['POST'])
+def clear_rag_database():
+    """Clear all documents from RAG database"""
+    try:
+        success = rag_system.clear_database()
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'RAG database cleared successfully'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to clear RAG database'
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 
 if __name__ == '__main__':

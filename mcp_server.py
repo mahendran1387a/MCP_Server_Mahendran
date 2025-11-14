@@ -1,5 +1,5 @@
 """
-MCP Server with Calculator, Weather, Gold Price, and Email Tools
+MCP Server with Calculator, Weather, Gold Price, Email, and RAG Tools
 """
 import asyncio
 import json
@@ -8,13 +8,15 @@ from datetime import datetime
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
+from rag_system import get_rag_system
 
 
 class MCPServer:
-    """MCP Server with Calculator, Weather, Gold Price, and Email tools"""
+    """MCP Server with Calculator, Weather, Gold Price, Email, and RAG tools"""
 
     def __init__(self):
         self.server = Server("langchain-ollama-mcp")
+        self.rag_system = get_rag_system()
         self.setup_handlers()
 
     def setup_handlers(self):
@@ -104,6 +106,25 @@ class MCPServer:
                         },
                         "required": ["to", "subject", "body"]
                     }
+                ),
+                Tool(
+                    name="rag_query",
+                    description="Query the RAG (Retrieval-Augmented Generation) database to find relevant information from uploaded documents",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The question or search query to find relevant information"
+                            },
+                            "n_results": {
+                                "type": "number",
+                                "description": "Number of relevant documents to retrieve (default: 3)",
+                                "default": 3
+                            }
+                        },
+                        "required": ["query"]
+                    }
                 )
             ]
 
@@ -119,6 +140,8 @@ class MCPServer:
                 return await self.gold_price_tool(arguments)
             elif name == "send_email":
                 return await self.send_email_tool(arguments)
+            elif name == "rag_query":
+                return await self.rag_query_tool(arguments)
             else:
                 raise ValueError(f"Unknown tool: {name}")
 
@@ -298,6 +321,61 @@ to send real emails via Gmail, SendGrid, or other email services."""
             return [TextContent(
                 type="text",
                 text=f"❌ Error sending email: {str(e)}"
+            )]
+
+    async def rag_query_tool(self, arguments: dict) -> list[TextContent]:
+        """RAG query tool implementation - searches uploaded documents"""
+        query = arguments.get("query", "")
+        n_results = int(arguments.get("n_results", 3))
+
+        try:
+            if not query:
+                return [TextContent(
+                    type="text",
+                    text="❌ Error: No query provided"
+                )]
+
+            # Query the RAG database
+            results = self.rag_system.query(query, n_results=n_results)
+
+            if not results["documents"]:
+                return [TextContent(
+                    type="text",
+                    text=f"📚 RAG Query Results\n────────────────────────────────\nQuery: {query}\n\nNo relevant documents found.\n\nTip: Upload documents first using the web interface to enable RAG search."
+                )]
+
+            # Format results
+            response = f"""📚 RAG Query Results
+────────────────────────────────
+Query: {query}
+Found: {len(results['documents'])} relevant document(s)
+
+"""
+            for i, (doc, metadata, distance) in enumerate(zip(
+                results["documents"],
+                results["metadatas"],
+                results["distances"]
+            ), 1):
+                relevance = "High" if distance < 0.3 else "Medium" if distance < 0.6 else "Low"
+                response += f"""Result #{i} (Relevance: {relevance})
+────────────────────────────────
+{doc[:500]}{'...' if len(doc) > 500 else ''}
+
+Metadata: {metadata.get('filename', 'N/A')} | Length: {metadata.get('length', 0)} chars
+
+"""
+
+            response += "────────────────────────────────\n💡 Tip: You can use this information to answer your question!"
+
+            return [TextContent(
+                type="text",
+                text=response
+            )]
+
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=f"❌ Error querying RAG database: {str(e)}"
             )]
 
     async def run(self):
