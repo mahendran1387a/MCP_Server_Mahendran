@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Flow Visualization - LangChain + Ollama + MCP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 0;
+            min-height: 700px;
+        }
+
+        /* Left Panel - Controls */
+        .controls-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: #f0f4ff;
+        }
+
+        .query-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .query-option {
+            padding: 12px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        .query-option:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .query-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .playback-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn.play {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .control-btn.pause {
+            background: #ff9800;
+            color: white;
+        }
+
+        .control-btn.next {
+            background: #2196F3;
+            color: white;
+        }
+
+        .control-btn.prev {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .control-btn.reset {
+            background: #f44336;
+            color: white;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .speed-control {
+            margin-top: 10px;
+        }
+
+        .speed-control label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .speed-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .speed-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .step-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .step-info .current {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .step-info .total {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Center Panel - Flowchart */
+        .flowchart-panel {
+            background: #fafbfc;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #flowchart {
+            width: 100%;
+            height: 100%;
+            min-height: 700px;
+        }
+
+        .node {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .node-rect {
+            fill: white;
+            stroke: #666;
+            stroke-width: 2;
+            rx: 10;
+        }
+
+        .node.active .node-rect {
+            fill: #667eea;
+            stroke: #4c5fd5;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8));
+        }
+
+        .node.active .node-text {
+            fill: white;
+            font-weight: bold;
+        }
+
+        .node-text {
+            fill: #333;
+            font-size: 14px;
+            font-weight: 500;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .node-icon {
+            font-size: 24px;
+            text-anchor: middle;
+        }
+
+        .edge {
+            stroke: #999;
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.3;
+        }
+
+        .edge.active {
+            stroke: #4CAF50;
+            stroke-width: 3;
+            opacity: 1;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+
+        .data-packet {
+            r: 8;
+            fill: #ff5722;
+            filter: drop-shadow(0 0 10px rgba(255, 87, 34, 0.8));
+            opacity: 0;
+        }
+
+        .data-packet.active {
+            opacity: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        .node.pulsing {
+            animation: pulse 1s infinite;
+        }
+
+        /* Right Panel - Messages */
+        .messages-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-left: 2px solid #e0e0e0;
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        .messages-panel h3 {
+            margin-bottom: 20px;
+            color: #333;
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            padding-bottom: 10px;
+            z-index: 10;
+        }
+
+        .message-log {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+            opacity: 0.3;
+            transition: all 0.3s;
+        }
+
+        .message.active {
+            opacity: 1;
+            border-left-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .message .timestamp {
+            font-size: 0.8em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .message .from-to {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .message .content {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.5s;
+            width: 0%;
+        }
+
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.85em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+
+            .controls-panel, .messages-panel {
+                border: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Real-Time Flow Visualization</h1>
+            <p>Watch data flow through LangChain + Ollama + MCP in real-time</p>
+        </div>
+
+        <div class="main-layout">
+            <!-- Left Panel: Controls -->
+            <div class="controls-panel">
+                <div class="control-section">
+                    <h3>🎮 Mode</h3>
+                    <div class="mode-toggle">
+                        <button class="mode-btn" id="liveMode">Live</button>
+                        <button class="mode-btn active" id="replayMode">Replay</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>❓ Query</h3>
+                    <div class="query-selector">
+                        <div class="query-option selected" data-query="calculator">
+                            "What is 25 × 4?"
+                        </div>
+                        <div class="query-option" data-query="weather">
+                            "Weather in Paris?"
+                        </div>
+                        <div class="query-option" data-query="combined">
+                            "50 + 30 & weather?"
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="step-info">
+                    <div class="current" id="currentStep">1</div>
+                    <div class="total">of <span id="totalSteps">12</span> steps</div>
+                </div>
+
+                <div class="control-section">
+                    <h3>▶️ Playback</h3>
+                    <div class="playback-controls">
+                        <button class="control-btn play" id="playBtn">▶ Play</button>
+                        <button class="control-btn pause" id="pauseBtn" style="display:none;">⏸ Pause</button>
+                        <button class="control-btn next" id="nextBtn">Next ▶</button>
+                        <button class="control-btn prev" id="prevBtn">◀ Previous</button>
+                        <button class="control-btn reset" id="resetBtn">🔄 Reset</button>
+                    </div>
+
+                    <div class="speed-control">
+                        <label>Speed: <span id="speedValue">1.0</span>x</label>
+                        <input type="range" class="speed-slider" id="speedSlider"
+                               min="0.5" max="3" step="0.5" value="1">
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #667eea;"></div>
+                        <span>Active Node</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4CAF50;"></div>
+                        <span>Data Flow</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff5722;"></div>
+                        <span>Data Packet</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel: Flowchart -->
+            <div class="flowchart-panel">
+                <svg id="flowchart"></svg>
+            </div>
+
+            <!-- Right Panel: Messages -->
+            <div class="messages-panel">
+                <h3>📨 Message Flow</h3>
+                <div class="message-log" id="messageLog"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const queries = {
+            calculator: {
+                question: "What is 25 × 4?",
+                tool: "calculator",
+                args: {operation: "multiply", a: 25, b: 4},
+                result: "Result: 100",
+                answer: "The result is 100."
+            },
+            weather: {
+                question: "What's the weather in Paris?",
+                tool: "weather",
+                args: {city: "Paris", units: "celsius"},
+                result: "20°C, Sunny",
+                answer: "Paris is 20°C and sunny."
+            },
+            combined: {
+                question: "Calculate 50 + 30, and weather?",
+                tool: "calculator",
+                args: {operation: "add", a: 50, b: 30},
+                result: "80, Tokyo: 18°C",
+                answer: "50+30=80. Tokyo is 18°C."
+            }
+        };
+
+        let currentQuery = queries.calculator;
+        let currentStep = 0;
+        let totalSteps = 12;
+        let isPlaying = false;
+        let playbackSpeed = 1.0;
+        let playInterval = null;
+
+        // Node positions
+        const nodes = {
+            user: {x: 400, y: 50, label: "👤 User", width: 120, height: 60},
+            langchain: {x: 400, y: 180, label: "🔗 LangChain\nClient", width: 140, height: 70},
+            ollama: {x: 200, y: 350, label: "🧠 Ollama\nLLM", width: 130, height: 70},
+            mcpClient: {x: 600, y: 350, label: "🔌 MCP\nClient", width: 130, height: 70},
+            mcpServer: {x: 600, y: 520, label: "🛠️ MCP\nServer", width: 130, height: 70},
+            tools: {x: 600, y: 650, label: "⚙️ Tools", width: 120, height: 60}
+        };
+
+        // Step definitions
+        function getSteps(query) {
+            return [
+                {
+                    from: "user", to: "langchain",
+                    message: {from: "User", to: "LangChain Client", content: query.question},
+                    description: "User submits query"
+                },
+                {
+                    from: "langchain", to: "langchain",
+                    message: {from: "LangChain", to: "Self", content: "Preparing system prompt with tool descriptions..."},
+                    description: "Prepare context"
+                },
+                {
+                    from: "langchain", to: "ollama",
+                    message: {from: "LangChain", to: "Ollama", content: `System: You have calculator and weather tools\nUser: ${query.question}`},
+                    description: "Send to LLM"
+                },
+                {
+                    from: "ollama", to: "ollama",
+                    message: {from: "Ollama", to: "Self", content: "Analyzing query... Need to use tool!"},
+                    description: "LLM reasoning"
+                },
+                {
+                    from: "ollama", to: "langchain",
+                    message: {from: "Ollama", to: "LangChain", content: `{"tool": "${query.tool}", "arguments": ${JSON.stringify(query.args)}}`},
+                    description: "LLM decides tool"
+                },
+                {
+                    from: "langchain", to: "langchain",
+                    message: {from: "LangChain", to: "Self", content: `Extracted tool call: ${query.tool}`},
+                    description: "Parse tool call"
+                },
+                {
+                    from: "langchain", to: "mcpClient",
+                    message: {from: "LangChain", to: "MCP Client", content: `call_tool("${query.tool}", ${JSON.stringify(query.args)})`},
+                    description: "Request MCP tool"
+                },
+                {
+                    from: "mcpClient", to: "mcpServer",
+                    message: {from: "MCP Client", to: "MCP Server", content: `Execute: ${query.tool}(${JSON.stringify(query.args)})`},
+                    description: "Forward to server"
+                },
+                {
+                    from: "mcpServer", to: "tools",
+                    message: {from: "MCP Server", to: "Tools", content: `Run ${query.tool} with args`},
+                    description: "Execute tool"
+                },
+                {
+                    from: "tools", to: "langchain",
+                    message: {from: "Tools", to: "LangChain", content: `Result: ${query.result}`},
+                    description: "Return result"
+                },
+                {
+                    from: "langchain", to: "ollama",
+                    message: {from: "LangChain", to: "Ollama", content: `Tool returned: ${query.result}`},
+                    description: "Send result to LLM"
+                },
+                {
+                    from: "ollama", to: "user",
+                    message: {from: "Ollama", to: "User", content: query.answer},
+                    description: "Final answer"
+                }
+            ];
+        }
+
+        let steps = getSteps(currentQuery);
+
+        // Initialize SVG
+        function initFlowchart() {
+            const svg = document.getElementById('flowchart');
+            const svgNS = "http://www.w3.org/2000/svg";
+
+            // Clear existing content
+            svg.innerHTML = '';
+
+            // Create edges
+            const edges = [
+                {from: 'user', to: 'langchain'},
+                {from: 'langchain', to: 'ollama'},
+                {from: 'langchain', to: 'mcpClient'},
+                {from: 'mcpClient', to: 'mcpServer'},
+                {from: 'mcpServer', to: 'tools'},
+            ];
+
+            const edgeGroup = document.createElementNS(svgNS, 'g');
+            edgeGroup.id = 'edges';
+
+            edges.forEach((edge, idx) => {
+                const from = nodes[edge.from];
+                const to = nodes[edge.to];
+
+                const path = document.createElementNS(svgNS, 'path');
+                const fromX = from.x;
+                const fromY = from.y + from.height;
+                const toX = to.x;
+                const toY = to.y;
+
+                const d = `M ${fromX} ${fromY} L ${toX} ${toY}`;
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'edge');
+                path.setAttribute('id', `edge-${edge.from}-${edge.to}`);
+                path.setAttribute('stroke-dasharray', '5,5');
+
+                edgeGroup.appendChild(path);
+            });
+
+            svg.appendChild(edgeGroup);
+
+            // Create nodes
+            const nodeGroup = document.createElementNS(svgNS, 'g');
+            nodeGroup.id = 'nodes';
+
+            Object.entries(nodes).forEach(([id, node]) => {
+                const g = document.createElementNS(svgNS, 'g');
+                g.setAttribute('class', 'node');
+                g.setAttribute('id', `node-${id}`);
+
+                const rect = document.createElementNS(svgNS, 'rect');
+                rect.setAttribute('class', 'node-rect');
+                rect.setAttribute('x', node.x - node.width/2);
+                rect.setAttribute('y', node.y);
+                rect.setAttribute('width', node.width);
+                rect.setAttribute('height', node.height);
+
+                const text = document.createElementNS(svgNS, 'text');
+                text.setAttribute('class', 'node-text');
+                text.setAttribute('x', node.x);
+                text.setAttribute('y', node.y + node.height/2 + 5);
+
+                const lines = node.label.split('\n');
+                lines.forEach((line, i) => {
+                    const tspan = document.createElementNS(svgNS, 'tspan');
+                    tspan.textContent = line;
+                    tspan.setAttribute('x', node.x);
+                    tspan.setAttribute('dy', i === 0 ? 0 : '1.2em');
+                    text.appendChild(tspan);
+                });
+
+                g.appendChild(rect);
+                g.appendChild(text);
+                nodeGroup.appendChild(g);
+            });
+
+            svg.appendChild(nodeGroup);
+
+            // Create data packet layer
+            const packetGroup = document.createElementNS(svgNS, 'g');
+            packetGroup.id = 'packets';
+            svg.appendChild(packetGroup);
+        }
+
+        // Animate step
+        function animateStep(stepIndex) {
+            if (stepIndex >= steps.length) return;
+
+            const step = steps[stepIndex];
+
+            // Clear previous animations
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('active', 'pulsing'));
+            document.querySelectorAll('.edge').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.data-packet').forEach(p => p.remove());
+
+            // Activate nodes
+            const fromNode = document.getElementById(`node-${step.from}`);
+            const toNode = document.getElementById(`node-${step.to}`);
+
+            if (fromNode) fromNode.classList.add('active', 'pulsing');
+
+            setTimeout(() => {
+                if (fromNode) fromNode.classList.remove('pulsing');
+
+                if (step.from !== step.to) {
+                    // Animate edge and packet
+                    animateDataPacket(step.from, step.to);
+
+                    setTimeout(() => {
+                        if (toNode) toNode.classList.add('active');
+                    }, 500);
+                }
+            }, 300);
+
+            // Update messages
+            updateMessages(stepIndex);
+        }
+
+        // Animate data packet
+        function animateDataPacket(fromId, toId) {
+            const svg = document.getElementById('flowchart');
+            const svgNS = "http://www.w3.org/2000/svg";
+            const packetGroup = document.getElementById('packets');
+
+            const from = nodes[fromId];
+            const to = nodes[toId];
+
+            if (!from || !to || fromId === toId) return;
+
+            // Activate edge
+            const edgeId = `edge-${fromId}-${toId}`;
+            const edge = document.getElementById(edgeId);
+            if (edge) edge.classList.add('active');
+
+            // Create packet
+            const packet = document.createElementNS(svgNS, 'circle');
+            packet.setAttribute('class', 'data-packet active');
+            packet.setAttribute('cx', from.x);
+            packet.setAttribute('cy', from.y + from.height);
+
+            packetGroup.appendChild(packet);
+
+            // Animate packet
+            const startX = from.x;
+            const startY = from.y + from.height;
+            const endX = to.x;
+            const endY = to.y;
+
+            const duration = 1000 / playbackSpeed;
+            const startTime = Date.now();
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                const currentX = startX + (endX - startX) * progress;
+                const currentY = startY + (endY - startY) * progress;
+
+                packet.setAttribute('cx', currentX);
+                packet.setAttribute('cy', currentY);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    setTimeout(() => {
+                        packet.remove();
+                        if (edge) edge.classList.remove('active');
+                    }, 200);
+                }
+            }
+
+            animate();
+        }
+
+        // Update messages
+        function updateMessages(stepIndex) {
+            const messageLog = document.getElementById('messageLog');
+            const messages = steps.slice(0, stepIndex + 1).map((step, idx) => {
+                const isActive = idx === stepIndex;
+                return `
+                    <div class="message ${isActive ? 'active' : ''}">
+                        <div class="timestamp">Step ${idx + 1}</div>
+                        <div class="from-to">${step.message.from} → ${step.message.to}</div>
+                        <div class="content">${step.message.content}</div>
+                    </div>
+                `;
+            });
+
+            messageLog.innerHTML = messages.join('');
+
+            // Scroll to active message
+            const activeMsg = messageLog.querySelector('.message.active');
+            if (activeMsg) {
+                activeMsg.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            }
+        }
+
+        // Update progress
+        function updateProgress() {
+            const progress = ((currentStep + 1) / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('currentStep').textContent = currentStep + 1;
+        }
+
+        // Playback functions
+        function play() {
+            if (isPlaying) return;
+            isPlaying = true;
+            document.getElementById('playBtn').style.display = 'none';
+            document.getElementById('pauseBtn').style.display = 'block';
+
+            playInterval = setInterval(() => {
+                if (currentStep < totalSteps - 1) {
+                    currentStep++;
+                    animateStep(currentStep);
+                    updateProgress();
+                } else {
+                    pause();
+                }
+            }, 2000 / playbackSpeed);
+        }
+
+        function pause() {
+            isPlaying = false;
+            document.getElementById('playBtn').style.display = 'block';
+            document.getElementById('pauseBtn').style.display = 'none';
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+
+        function next() {
+            pause();
+            if (currentStep < totalSteps - 1) {
+                currentStep++;
+                animateStep(currentStep);
+                updateProgress();
+            }
+        }
+
+        function prev() {
+            pause();
+            if (currentStep > 0) {
+                currentStep--;
+                animateStep(currentStep);
+                updateProgress();
+            }
+        }
+
+        function reset() {
+            pause();
+            currentStep = 0;
+            animateStep(currentStep);
+            updateProgress();
+        }
+
+        // Event listeners
+        document.getElementById('playBtn').addEventListener('click', play);
+        document.getElementById('pauseBtn').addEventListener('click', pause);
+        document.getElementById('nextBtn').addEventListener('click', next);
+        document.getElementById('prevBtn').addEventListener('click', prev);
+        document.getElementById('resetBtn').addEventListener('click', reset);
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            playbackSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = playbackSpeed.toFixed(1);
+
+            if (isPlaying) {
+                pause();
+                play();
+            }
+        });
+
+        // Query selection
+        document.querySelectorAll('.query-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.query-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+
+                const queryType = option.dataset.query;
+                currentQuery = queries[queryType];
+                steps = getSteps(currentQuery);
+                totalSteps = steps.length;
+                document.getElementById('totalSteps').textContent = totalSteps;
+
+                reset();
+            });
+        });
+
+        // Mode toggle
+        document.getElementById('liveMode').addEventListener('click', () => {
+            document.getElementById('liveMode').classList.add('active');
+            document.getElementById('replayMode').classList.remove('active');
+            reset();
+            play();
+        });
+
+        document.getElementById('replayMode').addEventListener('click', () => {
+            document.getElementById('replayMode').classList.add('active');
+            document.getElementById('liveMode').classList.remove('active');
+            pause();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (isPlaying) pause();
+                else play();
+            } else if (e.key === 'ArrowRight') {
+                next();
+            } else if (e.key === 'ArrowLeft') {
+                prev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                reset();
+            }
+        });
+
+        // Initialize
+        initFlowchart();
+        animateStep(currentStep);
+        updateProgress();
+    </script>
+</body>
+</html>
