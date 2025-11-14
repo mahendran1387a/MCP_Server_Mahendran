@@ -10,6 +10,8 @@ import uuid
 from datetime import datetime
 import sys
 import os
+import threading
+from concurrent.futures import Future
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +37,30 @@ rag_system = get_rag_system()
 
 # Store active clients per session
 active_clients = {}
+
+# Create a single event loop for all async operations
+loop = None
+loop_thread = None
+
+def start_background_loop(loop):
+    """Run event loop in background thread"""
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+def get_or_create_event_loop():
+    """Get or create the background event loop"""
+    global loop, loop_thread
+    if loop is None:
+        loop = asyncio.new_event_loop()
+        loop_thread = threading.Thread(target=start_background_loop, args=(loop,), daemon=True)
+        loop_thread.start()
+    return loop
+
+def run_async(coro):
+    """Run async function in the background loop"""
+    loop = get_or_create_event_loop()
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    return future.result()
 
 
 def allowed_file(filename):
@@ -77,7 +103,7 @@ def initialize():
                 await client.initialize()
                 return client
 
-            client = asyncio.run(init_client())
+            client = run_async(init_client())
             client_data['client'] = client
 
         return jsonify({
@@ -130,7 +156,7 @@ def query():
                         raise RuntimeError(f"❌ Initialization failed: {error_msg}")
 
             try:
-                client = asyncio.run(init_client())
+                client = run_async(init_client())
                 client_data['client'] = client
             except RuntimeError as e:
                 return jsonify({
@@ -151,7 +177,7 @@ def query():
                 raise
 
         try:
-            response = asyncio.run(process())
+            response = run_async(process())
         except RuntimeError as e:
             return jsonify({
                 'status': 'error',
