@@ -48,12 +48,14 @@ class LangChainMCPClient:
         self.read_stream = None
         self.write_stream = None
 
-    async def initialize(self):
+    async def initialize(self, use_advanced_server=True):
         """Initialize the MCP connection and LangChain"""
-        # Connect to MCP server
+        # Connect to MCP server (use advanced server by default)
+        server_script = "mcp_server_advanced.py" if use_advanced_server else "mcp_server.py"
+
         server_params = StdioServerParameters(
             command="python",
-            args=["mcp_server.py"],
+            args=[server_script],
             env=None
         )
 
