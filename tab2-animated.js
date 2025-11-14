@@ -26,23 +26,101 @@ const queries2 = {
 
 let currentQuery2 = queries2.calculator;
 let currentStep2 = 0;
-let totalSteps2 = 14; // Browser->Web Server->AsyncManager->MCP Client->Ollama->MCP Server->Tools and back
+let totalSteps2 = getSteps2(queries2.calculator).length; // Dynamic based on query type
 let isPlaying = false;
 let playbackSpeed = 1.0;
 let playInterval = null;
 
 const nodes = {
-    browser: {x: 400, y: 50, label: "🌐 Browser", width: 130, height: 60},
-    webServer: {x: 400, y: 170, label: "⚡ Web Server\n(Flask)", width: 140, height: 70},
-    asyncManager: {x: 200, y: 310, label: "🔄 Async\nManager", width: 140, height: 70},
-    mcpClient: {x: 600, y: 310, label: "🔌 MCP\nClient", width: 130, height: 70},
-    ollama: {x: 200, y: 470, label: "🧠 Ollama\n(llama3.2)", width: 140, height: 70},
-    mcpServer: {x: 600, y: 470, label: "🛠️ MCP\nServer", width: 130, height: 70},
-    tools: {x: 600, y: 610, label: "⚙️ 8 Tools\n+ RAG API", width: 140, height: 70}
+    browser: {
+        x: 400, y: 60,
+        width: 600, height: 80,
+        title: "🌐 Browser",
+        subtitle: "(http://localhost:5000)",
+        details: [],
+        style: "primary"
+    },
+    webServer: {
+        x: 400, y: 200,
+        width: 600, height: 140,
+        title: "⚡ Web Server (Flask)",
+        subtitle: "(web_server.py)",
+        details: [
+            "• Serves web interface (templates/index.html)",
+            "• Manages sessions and routing",
+            "• Handles file uploads for RAG",
+            "• Opens ChromaDB (SINGLE connection - avoids locking)"
+        ],
+        style: "primary"
+    },
+    asyncManager: {
+        x: 400, y: 400,
+        width: 600, height: 140,
+        title: "🔄 AsyncClientManager",
+        subtitle: "(async_client_manager.py)",
+        details: [
+            "• Background thread with persistent event loop",
+            "• Manages MCP client lifecycle (create, query, cleanup)",
+            "• Thread-safe async execution with run_coroutine_threadsafe()",
+            "• Keeps clients alive across requests"
+        ],
+        style: "primary"
+    },
+    mcpClient: {
+        x: 400, y: 570,
+        width: 600, height: 100,
+        title: "🔌 LangChain MCP Client",
+        subtitle: "(langchain_mcp_client.py)",
+        details: [
+            "ChatOllama (llama3.2) ←→ MCP Wrapper (Tool Calls)"
+        ],
+        style: "primary"
+    },
+    mcpServer: {
+        x: 400, y: 770,
+        width: 600, height: 260,
+        title: "🛠️ MCP Server",
+        subtitle: "(mcp_server.py)",
+        details: [
+            "⚠️ IMPORTANT: Does NOT open ChromaDB directly (avoids locking)",
+            "📚 RAG queries use HTTP API → http://localhost:5000/api/rag/query",
+            "",
+            "8 Tools:",
+            "┌──────────┬──────────┬───────────┬────────────┐",
+            "│Calculator│ Weather  │Gold Price │   Email    │",
+            "├──────────┼──────────┼───────────┼────────────┤",
+            "│RAG Query │   Code   │    Web    │    File    │",
+            "│(HTTP API)│ Executor │  Scraper  │ Operations │",
+            "└──────────┴──────────┴───────────┴────────────┘"
+        ],
+        style: "warning"
+    },
+    ragSystem: {
+        x: 400, y: 1100,
+        width: 600, height: 120,
+        title: "📚 RAG System",
+        subtitle: "(rag_system.py)",
+        details: [
+            "• Document upload and chunking",
+            "• Vector embeddings with ChromaDB",
+            "• Semantic search and relevance scoring",
+            "• Accessed via web server (NO direct access from MCP server)"
+        ],
+        style: "success"
+    },
+    chromadb: {
+        x: 400, y: 1270,
+        width: 250, height: 80,
+        title: "💾 ChromaDB",
+        subtitle: "(Vector Database)",
+        details: ["./rag_db/"],
+        style: "database"
+    }
 };
 
 function getSteps2(query) {
-    return [
+    const isRAGQuery = query.tool === 'rag_query';
+    const steps = [
         {
             from: "browser", to: "webServer",
             message: {from: "Browser", to: "Web Server", content: `POST /api/query\n"${query.question}"`},
@@ -59,63 +137,64 @@ function getSteps2(query) {
             description: "Manager forwards to MCP client in background thread"
         },
         {
-            from: "mcpClient", to: "ollama",
-            message: {from: "MCP Client", to: "Ollama", content: `Query + System Prompt (8 tools)\n"${query.question}"`},
-            description: "Send question to Ollama LLM with tool descriptions"
-        },
-        {
-            from: "ollama", to: "mcpClient",
-            message: {from: "Ollama", to: "MCP Client", content: `{"tool": "${query.tool}", "arguments": {...}}`},
-            description: "Ollama decides to use a tool"
-        },
-        {
             from: "mcpClient", to: "mcpServer",
-            message: {from: "MCP Client", to: "MCP Server", content: `call_tool("${query.tool}", ${JSON.stringify(query.args)})`},
-            description: "Call MCP server to execute tool"
+            message: {from: "MCP Client", to: "MCP Server", content: `Query: "${query.question}"\nOllama determines tool: ${query.tool}`},
+            description: "MCP client sends query to server (Ollama inside client chooses tool)"
         },
         {
-            from: "mcpServer", to: "tools",
-            message: {from: "MCP Server", to: "Tools", content: `Execute: ${query.tool}\n${query.tool === 'rag_query' ? 'Via HTTP API → /api/rag/query' : 'Direct execution'}`},
-            description: query.tool === 'rag_query' ?
-                "RAG tool uses HTTP API (no DB locking!)" :
-                "Execute tool directly"
-        },
-        {
-            from: "tools", to: "mcpServer",
-            message: {from: "Tools", to: "MCP Server", content: `Result: ${query.result}`},
-            description: "Tool returns result"
-        },
-        {
-            from: "mcpServer", to: "mcpClient",
-            message: {from: "MCP Server", to: "MCP Client", content: `TextContent: "${query.result}"`},
-            description: "MCP server returns result to client"
-        },
-        {
-            from: "mcpClient", to: "ollama",
-            message: {from: "MCP Client", to: "Ollama", content: `Tool returned: ${query.result}\nFormat final answer`},
-            description: "Send tool result back to Ollama for formatting"
-        },
-        {
-            from: "ollama", to: "mcpClient",
-            message: {from: "Ollama", to: "MCP Client", content: `"${query.answer}"`},
-            description: "Ollama generates natural language response"
-        },
-        {
-            from: "mcpClient", to: "asyncManager",
-            message: {from: "MCP Client", to: "AsyncClientManager", content: `Response: "${query.answer}"`},
-            description: "Return response to manager"
-        },
-        {
-            from: "asyncManager", to: "webServer",
-            message: {from: "AsyncClientManager", to: "Web Server", content: `{"response": "${query.answer}"}`},
-            description: "Manager returns to web server"
-        },
-        {
-            from: "webServer", to: "browser",
-            message: {from: "Web Server", to: "Browser", content: `JSON Response\n💬 AI: "${query.answer}"`},
-            description: "Web server sends response to browser"
+            from: "mcpServer", to: "mcpServer",
+            message: {from: "MCP Server", to: "MCP Server", content: `Execute tool: ${query.tool}\nArgs: ${JSON.stringify(query.args)}`},
+            description: isRAGQuery ? "RAG tool execution starts" : "Execute tool directly"
         }
     ];
+
+    // Add RAG-specific steps
+    if (isRAGQuery) {
+        steps.push({
+            from: "mcpServer", to: "ragSystem",
+            message: {from: "MCP Server", to: "RAG System", content: `HTTP POST /api/rag/query\n{"query": "${query.args.query}", "n_results": ${query.args.n_results}}`},
+            description: "RAG tool uses HTTP API (no database locking!)"
+        });
+        steps.push({
+            from: "ragSystem", to: "chromadb",
+            message: {from: "RAG System", to: "ChromaDB", content: `Vector search: "${query.args.query}"\nTop ${query.args.n_results} results`},
+            description: "RAG system queries ChromaDB for semantic search"
+        });
+        steps.push({
+            from: "chromadb", to: "ragSystem",
+            message: {from: "ChromaDB", to: "RAG System", content: `${query.result}`},
+            description: "ChromaDB returns relevant documents"
+        });
+        steps.push({
+            from: "ragSystem", to: "mcpServer",
+            message: {from: "RAG System", to: "MCP Server", content: `HTTP Response:\n${query.result}`},
+            description: "RAG system returns results via HTTP"
+        });
+    }
+
+    // Common return path
+    steps.push({
+        from: "mcpServer", to: "mcpClient",
+        message: {from: "MCP Server", to: "MCP Client", content: `Tool result: ${query.result}`},
+        description: "MCP server returns tool result to client"
+    });
+    steps.push({
+        from: "mcpClient", to: "asyncManager",
+        message: {from: "MCP Client", to: "AsyncClientManager", content: `Final answer: "${query.answer}"`},
+        description: "Client formats response with Ollama and sends to manager"
+    });
+    steps.push({
+        from: "asyncManager", to: "webServer",
+        message: {from: "AsyncClientManager", to: "Web Server", content: `{"response": "${query.answer}"}`},
+        description: "Manager returns to web server"
+    });
+    steps.push({
+        from: "webServer", to: "browser",
+        message: {from: "Web Server", to: "Browser", content: `JSON Response\n💬 AI: "${query.answer}"`},
+        description: "Web server sends response to browser"
+    });
+
+    return steps;
 }
 
 // Initialize SVG flowchart
@@ -124,7 +203,7 @@ let svg, width, height;
 function initFlowchart() {
     const container = document.getElementById('flowchart');
     width = container.parentElement.clientWidth;
-    height = 700;
+    height = 1400; // Increased height for detailed diagram
 
     // Clear existing
     container.innerHTML = '';
@@ -154,30 +233,74 @@ function drawNode(id, node) {
     g.setAttribute('class', 'node');
     g.setAttribute('data-id', id);
 
+    // Main rectangle with style-based coloring
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('class', 'node-rect');
+    rect.setAttribute('class', `node-rect node-${node.style}`);
     rect.setAttribute('x', node.x - node.width/2);
     rect.setAttribute('y', node.y - node.height/2);
     rect.setAttribute('width', node.width);
     rect.setAttribute('height', node.height);
-
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('class', 'node-text');
-    text.setAttribute('x', node.x);
-    text.setAttribute('y', node.y);
-
-    // Handle multiline text
-    const lines = node.label.split('\n');
-    lines.forEach((line, i) => {
-        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        tspan.setAttribute('x', node.x);
-        tspan.setAttribute('dy', i === 0 ? '0' : '1.2em');
-        tspan.textContent = line;
-        text.appendChild(tspan);
-    });
+    rect.setAttribute('rx', 10);
 
     g.appendChild(rect);
-    g.appendChild(text);
+
+    let currentY = node.y - node.height/2 + 25;
+
+    // Title (bold, larger)
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    title.setAttribute('class', 'node-title');
+    title.setAttribute('x', node.x);
+    title.setAttribute('y', currentY);
+    title.setAttribute('text-anchor', 'middle');
+    title.setAttribute('font-weight', 'bold');
+    title.setAttribute('font-size', '16px');
+    title.textContent = node.title;
+    g.appendChild(title);
+    currentY += 20;
+
+    // Subtitle (smaller, gray)
+    if (node.subtitle) {
+        const subtitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        subtitle.setAttribute('class', 'node-subtitle');
+        subtitle.setAttribute('x', node.x);
+        subtitle.setAttribute('y', currentY);
+        subtitle.setAttribute('text-anchor', 'middle');
+        subtitle.setAttribute('font-size', '12px');
+        subtitle.setAttribute('fill', '#666');
+        subtitle.textContent = node.subtitle;
+        g.appendChild(subtitle);
+        currentY += 20;
+    }
+
+    // Details (left-aligned, smaller font)
+    if (node.details && node.details.length > 0) {
+        currentY += 5;
+        node.details.forEach(detail => {
+            const detailText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            detailText.setAttribute('class', 'node-detail');
+            detailText.setAttribute('x', node.x - node.width/2 + 15);
+            detailText.setAttribute('y', currentY);
+            detailText.setAttribute('text-anchor', 'start');
+            detailText.setAttribute('font-size', '11px');
+            detailText.setAttribute('font-family', 'monospace');
+
+            // Special styling for warnings
+            if (detail.startsWith('⚠️')) {
+                detailText.setAttribute('fill', '#ff5722');
+                detailText.setAttribute('font-weight', 'bold');
+            } else if (detail.startsWith('📚')) {
+                detailText.setAttribute('fill', '#2196F3');
+                detailText.setAttribute('font-weight', 'bold');
+            } else {
+                detailText.setAttribute('fill', '#333');
+            }
+
+            detailText.textContent = detail;
+            g.appendChild(detailText);
+            currentY += 15;
+        });
+    }
+
     svg.appendChild(g);
 }
 
@@ -185,11 +308,10 @@ function drawEdges() {
     const edges = [
         {from: 'browser', to: 'webServer'},
         {from: 'webServer', to: 'asyncManager'},
-        {from: 'webServer', to: 'mcpClient'},
         {from: 'asyncManager', to: 'mcpClient'},
-        {from: 'mcpClient', to: 'ollama'},
         {from: 'mcpClient', to: 'mcpServer'},
-        {from: 'mcpServer', to: 'tools'}
+        {from: 'mcpServer', to: 'ragSystem', style: 'http'},
+        {from: 'ragSystem', to: 'chromadb'}
     ];
 
     edges.forEach(edge => {
@@ -201,13 +323,55 @@ function drawEdges() {
         path.setAttribute('data-from', edge.from);
         path.setAttribute('data-to', edge.to);
 
-        // Simple straight line
-        const d = `M ${fromNode.x} ${fromNode.y + fromNode.height/2} L ${toNode.x} ${toNode.y - toNode.height/2}`;
+        // Calculate arrow path
+        const startY = fromNode.y + fromNode.height/2;
+        const endY = toNode.y - toNode.height/2;
+        const midY = (startY + endY) / 2;
+
+        // Draw arrow with marker
+        const d = `M ${fromNode.x} ${startY} L ${fromNode.x} ${midY} L ${toNode.x} ${midY} L ${toNode.x} ${endY}`;
         path.setAttribute('d', d);
-        path.setAttribute('stroke-dasharray', '10 5');
+        path.setAttribute('stroke-dasharray', '5 3');
+        path.setAttribute('marker-end', 'url(#arrowhead)');
+
+        // Special styling for HTTP edge
+        if (edge.style === 'http') {
+            path.setAttribute('stroke', '#2196F3');
+            path.setAttribute('stroke-width', '3');
+        }
 
         svg.appendChild(path);
+
+        // Add label for special edges
+        if (edge.style === 'http') {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', toNode.x + 40);
+            label.setAttribute('y', midY);
+            label.setAttribute('font-size', '11px');
+            label.setAttribute('fill', '#2196F3');
+            label.setAttribute('font-weight', 'bold');
+            label.textContent = 'HTTP (RAG only)';
+            svg.appendChild(label);
+        }
     });
+
+    // Add arrowhead marker definition
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+    marker.setAttribute('id', 'arrowhead');
+    marker.setAttribute('markerWidth', '10');
+    marker.setAttribute('markerHeight', '10');
+    marker.setAttribute('refX', '9');
+    marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+
+    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    polygon.setAttribute('points', '0 0, 10 3, 0 6');
+    polygon.setAttribute('fill', '#999');
+
+    marker.appendChild(polygon);
+    defs.appendChild(marker);
+    svg.insertBefore(defs, svg.firstChild);
 }
 
 function animateStep(step) {
