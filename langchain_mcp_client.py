@@ -44,6 +44,9 @@ class LangChainMCPClient:
         self.llm = None
         self.session = None
         self.mcp_wrapper = None
+        self.stdio_context = None
+        self.read_stream = None
+        self.write_stream = None
 
     async def initialize(self):
         """Initialize the MCP connection and LangChain"""
@@ -54,8 +57,15 @@ class LangChainMCPClient:
             env=None
         )
 
-        # Start MCP client session
-        self.session = await stdio_client(server_params).__aenter__()
+        # Start MCP client session with proper context manager handling
+        self.stdio_context = stdio_client(server_params)
+        self.read_stream, self.write_stream = await self.stdio_context.__aenter__()
+
+        # Create the ClientSession with the streams
+        self.session = ClientSession(self.read_stream, self.write_stream)
+        await self.session.__aenter__()
+
+        # Initialize the session
         await self.session.initialize()
 
         # Initialize MCP wrapper
@@ -187,8 +197,17 @@ Important: Only use the tools when necessary to answer the user's question."""
 
     async def cleanup(self):
         """Cleanup resources"""
-        if self.session:
-            await self.session.__aexit__(None, None, None)
+        try:
+            if self.session:
+                await self.session.__aexit__(None, None, None)
+        except Exception as e:
+            print(f"Warning: Error cleaning up session: {e}")
+
+        try:
+            if self.stdio_context:
+                await self.stdio_context.__aexit__(None, None, None)
+        except Exception as e:
+            print(f"Warning: Error cleaning up stdio context: {e}")
 
 
 async def main():

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangChain + Ollama + MCP - Interactive Flow Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .query-section {
+            margin-bottom: 30px;
+        }
+
+        .query-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .query-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .query-btn {
+            padding: 12px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .query-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .query-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .step-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .control-btn.next {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .control-btn.prev {
+            background: #2196F3;
+            color: white;
+        }
+
+        .control-btn.reset {
+            background: #f44336;
+            color: white;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .step-counter {
+            text-align: center;
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .visualization {
+            padding: 40px;
+            position: relative;
+        }
+
+        .component {
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.5s;
+            position: relative;
+        }
+
+        .component.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transform: scale(1.02);
+        }
+
+        .component h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .component-icon {
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .data-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .data-box.visible {
+            opacity: 1;
+        }
+
+        .data-box .label {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            margin: -10px 0;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .arrow.visible {
+            opacity: 1;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .explanation {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .explanation.visible {
+            opacity: 1;
+        }
+
+        .explanation h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .explanation p {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .code-snippet {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .code-snippet.visible {
+            opacity: 1;
+        }
+
+        .code-snippet .keyword {
+            color: #569cd6;
+        }
+
+        .code-snippet .string {
+            color: #ce9178;
+        }
+
+        .code-snippet .function {
+            color: #dcdcaa;
+        }
+
+        .code-snippet .comment {
+            color: #6a9955;
+        }
+
+        .legend {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .legend h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .legend-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                border-right: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Interactive Flow Visualization</h1>
+            <p>LangChain + Ollama + MCP Server</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Controls Sidebar -->
+            <div class="controls">
+                <div class="query-section">
+                    <h3>📝 Select a Query</h3>
+                    <div class="query-buttons">
+                        <button class="query-btn active" data-query="calculator">
+                            "What is 25 × 4?"
+                        </button>
+                        <button class="query-btn" data-query="weather">
+                            "Weather in Paris?"
+                        </button>
+                        <button class="query-btn" data-query="combined">
+                            "50 + 30 and weather in Tokyo"
+                        </button>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="step-counter">
+                    <div>Step <span id="currentStep">1</span> of <span id="totalSteps">9</span></div>
+                </div>
+
+                <div class="step-controls">
+                    <button class="control-btn next" id="nextBtn">Next Step ▶</button>
+                    <button class="control-btn prev" id="prevBtn">◀ Previous</button>
+                    <button class="control-btn reset" id="resetBtn">🔄 Reset</button>
+                </div>
+
+                <div class="legend">
+                    <h4>Legend</h4>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #667eea;"></div>
+                            <span>Active Component</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #4CAF50;"></div>
+                            <span>Data Flow</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ffc107;"></div>
+                            <span>Explanation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization Area -->
+            <div class="visualization" id="visualization">
+                <!-- Steps will be dynamically generated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Query configurations
+        const queries = {
+            calculator: {
+                question: "What is 25 × 4?",
+                toolNeeded: "calculator",
+                toolArgs: {operation: "multiply", a: 25, b: 4},
+                toolResult: "Result: 25 multiply 4 = 100",
+                finalAnswer: "The result of 25 multiplied by 4 is 100."
+            },
+            weather: {
+                question: "What's the weather in Paris?",
+                toolNeeded: "weather",
+                toolArgs: {city: "Paris", units: "celsius"},
+                toolResult: "Weather in Paris: 20°C, Sunny, Humidity: 65%, Wind: 15 km/h",
+                finalAnswer: "The weather in Paris is 20°C and sunny with 65% humidity."
+            },
+            combined: {
+                question: "Calculate 50 + 30, and also tell me the weather in Tokyo",
+                toolNeeded: "calculator",
+                toolArgs: {operation: "add", a: 50, b: 30},
+                toolResult: "Result: 50 add 30 = 80",
+                finalAnswer: "50 + 30 = 80. Weather in Tokyo is 18°C and cloudy."
+            }
+        };
+
+        let currentQuery = queries.calculator;
+        let currentStep = 0;
+        let totalSteps = 9;
+
+        // Step definitions
+        function getSteps(query) {
+            return [
+                {
+                    title: "1️⃣ User Input",
+                    component: "User",
+                    explanation: "The user types a question into the interactive CLI. The question is captured and sent to the LangChain client for processing.",
+                    data: `User Question: "${query.question}"`,
+                    code: `# main.py
+query = input("💬 You: ")  # "${query.question}"
+await client.process_query(query)`
+                },
+                {
+                    title: "2️⃣ LangChain Client Receives Query",
+                    component: "LangChain Client",
+                    explanation: "The LangChain client receives the query and prepares to send it to the Ollama LLM. It includes a system prompt that describes all available tools.",
+                    data: `Received: "${query.question}"
+Preparing context with tool descriptions...`,
+                    code: `# langchain_mcp_client.py
+async def process_query(self, query: str):
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": "${query.question}"}
+    ]`
+                },
+                {
+                    title: "3️⃣ System Prompt with Tools",
+                    component: "LangChain Client",
+                    explanation: "A system prompt is created that tells the LLM about available tools (calculator and weather). This is how the LLM knows what tools it can use.",
+                    data: `System Prompt:
+"You have access to these tools:
+- calculator: add, subtract, multiply, divide
+- weather: get weather for a city
+
+To use a tool, respond with JSON:
+{'tool': 'tool_name', 'arguments': {...}}"`,
+                    code: `# Tool descriptions are automatically fetched from MCP server
+tools = await self.mcp_wrapper.get_tools()
+system_prompt = self._format_tools_description(tools)`
+                },
+                {
+                    title: "4️⃣ Send to Ollama LLM",
+                    component: "Ollama",
+                    explanation: "The question and system prompt are sent to the Ollama LLM (llama3.2 model). The LLM analyzes the question and decides if it needs to use a tool.",
+                    data: `Sending to Ollama (llama3.2)...
+Question: "${query.question}"
+Context: [System prompt with tool descriptions]`,
+                    code: `# LangChain sends to Ollama
+response = self.llm.invoke(messages)
+# Ollama processes and decides action`
+                },
+                {
+                    title: "5️⃣ LLM Decides to Use Tool",
+                    component: "Ollama",
+                    explanation: `The LLM understands that to answer "${query.question}", it needs to use the ${query.toolNeeded} tool. It formats its response as JSON with the tool name and arguments.`,
+                    data: `LLM Response:
+{"tool": "${query.toolNeeded}", "arguments": ${JSON.stringify(query.toolArgs, null, 2)}}`,
+                    code: `# LLM response contains tool call
+response_text = response.content
+# Example: '{"tool": "${query.toolNeeded}", "arguments": {...}}'`
+                },
+                {
+                    title: "6️⃣ Parse and Call MCP Tool",
+                    component: "MCP Client",
+                    explanation: "The LangChain client extracts the tool call from the LLM's response, then calls the MCP server to execute the tool.",
+                    data: `Parsed Tool Call:
+Tool: ${query.toolNeeded}
+Arguments: ${JSON.stringify(query.toolArgs, null, 2)}
+
+Calling MCP Server...`,
+                    code: `# Extract tool call
+tool_call = self._extract_tool_call(response_text)
+
+# Call MCP tool
+result = await self.mcp_wrapper.call_tool(
+    "${query.toolNeeded}",
+    ${JSON.stringify(query.toolArgs, null, 2)}
+)`
+                },
+                {
+                    title: "7️⃣ MCP Server Executes Tool",
+                    component: "MCP Server",
+                    explanation: `The MCP server receives the request and executes the ${query.toolNeeded} tool with the provided arguments. It performs the actual operation and returns the result.`,
+                    data: `Executing: ${query.toolNeeded}
+Input: ${JSON.stringify(query.toolArgs, null, 2)}
+Output: "${query.toolResult}"`,
+                    code: `# mcp_server.py
+async def ${query.toolNeeded}_tool(self, arguments):
+    ${query.toolNeeded === 'calculator' ?
+        `operation = arguments["operation"]  # "${query.toolArgs.operation}"
+    a = arguments["a"]  # ${query.toolArgs.a}
+    b = arguments["b"]  # ${query.toolArgs.b}
+    result = a ${query.toolArgs.operation === 'multiply' ? '*' : '+'} b` :
+        `city = arguments["city"]  # "${query.toolArgs.city}"
+    # Fetch weather data...
+    result = get_weather(city)`}
+    return [TextContent(text=f"${query.toolResult}")]`
+                },
+                {
+                    title: "8️⃣ Send Result to LLM",
+                    component: "Ollama",
+                    explanation: "The tool result is sent back to the LLM. The LLM now has the information it needs to formulate a natural language response for the user.",
+                    data: `Tool Result: "${query.toolResult}"
+
+Asking LLM to format natural response...`,
+                    code: `# Add tool result to conversation
+messages.append({
+    "role": "user",
+    "content": "Tool returned: ${query.toolResult}"
+})
+
+# Ask LLM to formulate answer
+response = self.llm.invoke(messages)`
+                },
+                {
+                    title: "9️⃣ Final Answer to User",
+                    component: "User",
+                    explanation: "The LLM generates a natural language response based on the tool result. This final answer is displayed to the user in the CLI.",
+                    data: `Final Answer:
+"${query.finalAnswer}"`,
+                    code: `# Display to user
+print(f"Final Answer: {response_text}")
+
+# Output shown in terminal:
+# "${query.finalAnswer}"`
+                }
+            ];
+        }
+
+        let steps = getSteps(currentQuery);
+
+        // Initialize
+        function init() {
+            renderStep();
+            updateControls();
+        }
+
+        // Render current step
+        function renderStep() {
+            const viz = document.getElementById('visualization');
+            const step = steps[currentStep];
+
+            viz.innerHTML = `
+                <div class="component active">
+                    <h3>
+                        <span class="component-icon">${step.title.substring(0, 2)}</span>
+                        ${step.title}
+                    </h3>
+
+                    <div class="explanation visible">
+                        <h4>📖 What's Happening?</h4>
+                        <p>${step.explanation}</p>
+                    </div>
+
+                    <div class="data-box visible">
+                        <div class="label">📊 Data:</div>
+                        <pre>${step.data}</pre>
+                    </div>
+
+                    <div class="code-snippet visible">
+                        <div class="label" style="color: #4CAF50; margin-bottom: 10px;">💻 Code:</div>
+                        <pre>${highlightCode(step.code)}</pre>
+                    </div>
+                </div>
+
+                ${currentStep < totalSteps - 1 ? '<div class="arrow visible">⬇️</div>' : ''}
+            `;
+
+            updateProgress();
+        }
+
+        // Highlight code
+        function highlightCode(code) {
+            return code
+                .replace(/(async|def|await|return|import|from|if|else)/g, '<span class="keyword">$1</span>')
+                .replace(/(".*?")/g, '<span class="string">$1</span>')
+                .replace(/(#.*)/g, '<span class="comment">$1</span>')
+                .replace(/(\w+)\(/g, '<span class="function">$1</span>(');
+        }
+
+        // Update controls
+        function updateControls() {
+            document.getElementById('currentStep').textContent = currentStep + 1;
+            document.getElementById('totalSteps').textContent = totalSteps;
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === totalSteps - 1;
+        }
+
+        // Update progress bar
+        function updateProgress() {
+            const progress = ((currentStep + 1) / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        // Event listeners
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentStep < totalSteps - 1) {
+                currentStep++;
+                renderStep();
+                updateControls();
+            }
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentStep > 0) {
+                currentStep--;
+                renderStep();
+                updateControls();
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            currentStep = 0;
+            renderStep();
+            updateControls();
+        });
+
+        // Query selection
+        document.querySelectorAll('.query-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active button
+                document.querySelectorAll('.query-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Load new query
+                const queryType = btn.dataset.query;
+                currentQuery = queries[queryType];
+                steps = getSteps(currentQuery);
+                currentStep = 0;
+                renderStep();
+                updateControls();
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && currentStep < totalSteps - 1) {
+                currentStep++;
+                renderStep();
+                updateControls();
+            } else if (e.key === 'ArrowLeft' && currentStep > 0) {
+                currentStep--;
+                renderStep();
+                updateControls();
+            } else if (e.key === 'r' || e.key === 'R') {
+                currentStep = 0;
+                renderStep();
+                updateControls();
+            }
+        });
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
