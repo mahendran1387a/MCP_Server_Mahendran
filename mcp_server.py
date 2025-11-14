@@ -13,7 +13,6 @@ from contextlib import redirect_stdout, redirect_stderr
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
-from rag_system import get_rag_system
 import urllib.request
 import urllib.error
 from html.parser import HTMLParser
@@ -24,7 +23,8 @@ class MCPServer:
 
     def __init__(self):
         self.server = Server("langchain-ollama-mcp")
-        self.rag_system = get_rag_system()
+        # Don't initialize RAG system here to avoid database locking issues
+        # RAG queries will use the web server's HTTP API instead
         self.setup_handlers()
 
     def setup_handlers(self):
@@ -394,7 +394,7 @@ to send real emails via Gmail, SendGrid, or other email services."""
             )]
 
     async def rag_query_tool(self, arguments: dict) -> list[TextContent]:
-        """RAG query tool implementation - searches uploaded documents"""
+        """RAG query tool implementation - uses HTTP API to avoid database locking"""
         query = arguments.get("query", "")
         n_results = int(arguments.get("n_results", 3))
 
@@ -405,29 +405,45 @@ to send real emails via Gmail, SendGrid, or other email services."""
                     text="❌ Error: No query provided"
                 )]
 
-            # Query the RAG database
-            results = self.rag_system.query(query, n_results=n_results)
+            # Use HTTP API to query RAG system (avoids database locking)
+            import urllib.request
+            import urllib.parse
 
-            if not results["documents"]:
-                return [TextContent(
-                    type="text",
-                    text=f"📚 RAG Query Results\n────────────────────────────────\nQuery: {query}\n\nNo relevant documents found.\n\nTip: Upload documents first using the web interface to enable RAG search."
-                )]
+            # Make request to web server's RAG API
+            data = json.dumps({"query": query, "n_results": n_results}).encode('utf-8')
+            req = urllib.request.Request(
+                "http://localhost:5000/api/rag/query",
+                data=data,
+                headers={'Content-Type': 'application/json'}
+            )
 
-            # Format results
-            response = f"""📚 RAG Query Results
+            try:
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    result = json.loads(response.read().decode('utf-8'))
+
+                if result.get("status") == "success":
+                    results = result.get("results", {})
+
+                    if not results.get("documents"):
+                        return [TextContent(
+                            type="text",
+                            text=f"📚 RAG Query Results\n────────────────────────────────\nQuery: {query}\n\nNo relevant documents found.\n\nTip: Upload documents first using the web interface to enable RAG search."
+                        )]
+
+                    # Format results
+                    response_text = f"""📚 RAG Query Results
 ────────────────────────────────
 Query: {query}
 Found: {len(results['documents'])} relevant document(s)
 
 """
-            for i, (doc, metadata, distance) in enumerate(zip(
-                results["documents"],
-                results["metadatas"],
-                results["distances"]
-            ), 1):
-                relevance = "High" if distance < 0.3 else "Medium" if distance < 0.6 else "Low"
-                response += f"""Result #{i} (Relevance: {relevance})
+                    for i, (doc, metadata, distance) in enumerate(zip(
+                        results["documents"],
+                        results["metadatas"],
+                        results["distances"]
+                    ), 1):
+                        relevance = "High" if distance < 0.3 else "Medium" if distance < 0.6 else "Low"
+                        response_text += f"""Result #{i} (Relevance: {relevance})
 ────────────────────────────────
 {doc[:500]}{'...' if len(doc) > 500 else ''}
 
@@ -435,12 +451,24 @@ Metadata: {metadata.get('filename', 'N/A')} | Length: {metadata.get('length', 0)
 
 """
 
-            response += "────────────────────────────────\n💡 Tip: You can use this information to answer your question!"
+                    response_text += "────────────────────────────────\n💡 Tip: You can use this information to answer your question!"
 
-            return [TextContent(
-                type="text",
-                text=response
-            )]
+                    return [TextContent(
+                        type="text",
+                        text=response_text
+                    )]
+                else:
+                    return [TextContent(
+                        type="text",
+                        text=f"❌ RAG query failed: {result.get('message', 'Unknown error')}"
+                    )]
+
+            except urllib.error.URLError:
+                # Web server not accessible, return helpful message
+                return [TextContent(
+                    type="text",
+                    text="❌ RAG system unavailable (web server not accessible). Please ensure the web server is running."
+                )]
 
         except Exception as e:
             return [TextContent(

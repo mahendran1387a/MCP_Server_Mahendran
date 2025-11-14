@@ -414,6 +414,34 @@ def get_rag_documents():
         }), 500
 
 
+@app.route('/api/rag/query', methods=['POST'])
+def query_rag_database():
+    """Query the RAG database for relevant documents"""
+    try:
+        data = request.json
+        query = data.get('query', '')
+        n_results = data.get('n_results', 3)
+
+        if not query:
+            return jsonify({
+                'status': 'error',
+                'message': 'No query provided'
+            }), 400
+
+        # Query the RAG database
+        results = rag_system.query(query, n_results=n_results)
+
+        return jsonify({
+            'status': 'success',
+            'results': results
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
 @app.route('/api/rag/clear', methods=['POST'])
 def clear_rag_database():
     """Clear all documents from RAG database"""
