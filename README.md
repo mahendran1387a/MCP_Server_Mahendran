@@ -1,192 +1,253 @@
-# LangChain + Ollama + MCP Server
+# LangChain + Ollama + MCP Server with Web Interface
 
-A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with multiple intelligent tools.
+A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with 8 intelligent tools, a beautiful web interface, and RAG (Retrieval-Augmented Generation) capabilities.
 
-## Features
+## ✨ Features
 
-- **LangChain Integration**: Leverages LangChain for building LLM applications
-- **Ollama Support**: Uses local Ollama models for privacy and control
-- **MCP Server**: Implements a Model Control Plane with **8 powerful tools**:
-  - **Calculator**: Perform arithmetic operations (add, subtract, multiply, divide)
-  - **Weather**: Get weather information for any city (mock data for demo)
-  - **Gold Price**: Get live market gold prices in multiple currencies (USD, EUR, GBP, INR)
-  - **Email**: Send emails with subject and body to recipients
-  - **RAG (Retrieval-Augmented Generation)**: Upload documents and query them with semantic search
-  - **Code Execution**: Execute Python code safely with output capture
-  - **Web Scraping**: Extract text and links from web pages
-  - **File Operations**: Read, write, list files and directories
-- **Modern Web Interface**: Beautiful responsive UI with dark mode and toast notifications
-- **Interactive CLI**: User-friendly command-line interface
-- **Demo Mode**: Pre-configured examples to showcase capabilities
-- **Interactive Visualizations**: Two-tab web interface showing step-by-step and animated flows
-- **Document Intelligence**: RAG system with vector database for document search
+- **🌐 Modern Web Interface**: Beautiful responsive UI with real-time chat and file upload
+- **🤖 LangChain Integration**: Leverages LangChain for building LLM applications
+- **🦙 Ollama Support**: Uses local Ollama models (llama3.2) for privacy and control
+- **🛠️ MCP Server**: Implements a Model Control Plane with **8 powerful tools**:
+  - 🔢 **Calculator**: Perform arithmetic operations (add, subtract, multiply, divide)
+  - 🌤️ **Weather**: Get weather information for any city (mock data for demo)
+  - 💰 **Gold Price**: Get live market gold prices in multiple currencies (USD, EUR, GBP, INR)
+  - 📧 **Email**: Send emails with subject and body to recipients (simulated)
+  - 📚 **RAG Query**: Upload documents and query them with semantic search
+  - 💻 **Code Execution**: Execute Python code safely with output capture
+  - 🌐 **Web Scraping**: Extract text and links from web pages
+  - 📁 **File Operations**: Read, write, list files and directories
+- **🔄 AsyncIO Architecture**: Background event loop with AsyncClientManager for handling concurrent requests
+- **📊 RAG System**: Vector database with ChromaDB for document intelligence
+- **📈 Interactive Visualizations**: Step-by-step and animated flowcharts showing system architecture
+- **🪟 Windows Support**: Dedicated startup scripts and setup guide for Windows users
 
-## Architecture
+## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Main Application                     │
-│                      (main.py)                          │
-└─────────────────┬───────────────────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│            LangChain MCP Client                         │
-│          (langchain_mcp_client.py)                      │
-│                                                         │
-│  ┌──────────────┐           ┌───────────────┐         │
-│  │   LangChain  │◄─────────►│  MCP Wrapper  │         │
-│  │   + Ollama   │           │               │         │
-│  └──────────────┘           └───────┬───────┘         │
-└────────────────────────────────────┼───────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────┐
-│                   MCP Server                            │
-│                (mcp_server.py)                          │
-│                                                         │
-│  ┌──────────┐  ┌────────┐  ┌─────────┐  ┌──────┐     │
-│  │Calculator│  │Weather │  │GoldPrice│  │Email │     │
-│  │   Tool   │  │  Tool  │  │  Tool   │  │ Tool │     │
-│  └──────────┘  └────────┘  └─────────┘  └──────┘     │
-│                                                         │
-│  ┌──────────────────────────────────────────────┐     │
-│  │          RAG Query Tool                       │     │
-│  │      (Document Search & Retrieval)           │     │
-│  └────────────────┬─────────────────────────────┘     │
-└───────────────────┼───────────────────────────────────┘
-                    │
-                    ▼
-         ┌────────────────────────┐
-         │    RAG System          │
-         │  (rag_system.py)       │
-         │                        │
-         │  • Document Upload     │
-         │  • Text Extraction     │
-         │  • Chunking            │
-         │  • Vector Search       │
-         └──────────┬─────────────┘
-                    │
-                    ▼
-         ┌────────────────────────┐
-         │     ChromaDB           │
-         │  (Vector Database)     │
-         └────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                          Browser                                  │
+│                   (http://localhost:5000)                         │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │ HTTP/JSON
+                           ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                      Web Server (Flask)                           │
+│                      (web_server.py)                              │
+│                                                                   │
+│  • Serves web interface (templates/index.html)                   │
+│  • Manages sessions and routing                                  │
+│  • Handles file uploads for RAG                                  │
+│  • Opens ChromaDB (SINGLE connection - avoids locking)           │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  AsyncClientManager                               │
+│              (async_client_manager.py)                            │
+│                                                                   │
+│  • Background thread with persistent event loop                  │
+│  • Manages MCP client lifecycle (create, query, cleanup)         │
+│  • Thread-safe async execution with run_coroutine_threadsafe()   │
+│  • Keeps clients alive across requests                           │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────┐
+│              LangChain MCP Client                                 │
+│           (langchain_mcp_client.py)                               │
+│                                                                   │
+│  ┌──────────────────┐              ┌──────────────────┐         │
+│  │  ChatOllama      │              │  MCP Wrapper     │         │
+│  │  (llama3.2)      │◄────────────►│  (Tool Calls)    │         │
+│  └──────────────────┘              └────────┬─────────┘         │
+└───────────────────────────────────────────────┼──────────────────┘
+                                                │ stdio (subprocess)
+                                                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                       MCP Server                                  │
+│                    (mcp_server.py)                                │
+│                                                                   │
+│  ⚠️  IMPORTANT: Does NOT open ChromaDB directly (avoids locking) │
+│  📚 RAG queries use HTTP API → http://localhost:5000/api/rag/query│
+│                                                                   │
+│  ┌────────────┐  ┌──────────┐  ┌───────────┐  ┌────────────┐   │
+│  │ Calculator │  │ Weather  │  │ Gold Price│  │   Email    │   │
+│  └────────────┘  └──────────┘  └───────────┘  └────────────┘   │
+│                                                                   │
+│  ┌────────────┐  ┌──────────┐  ┌───────────┐  ┌────────────┐   │
+│  │ RAG Query  │  │   Code   │  │    Web    │  │    File    │   │
+│  │ (HTTP API) │  │ Executor │  │  Scraper  │  │ Operations │   │
+│  └────────────┘  └──────────┘  └───────────┘  └────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+                           │
+                           │ HTTP (RAG queries only)
+                           ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     RAG System                                    │
+│                   (rag_system.py)                                 │
+│                                                                   │
+│  • Document upload and chunking                                  │
+│  • Vector embeddings with ChromaDB                               │
+│  • Semantic search and relevance scoring                         │
+│  • Accessed via web server (NO direct access from MCP server)    │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │
+                           ▼
+                  ┌────────────────────┐
+                  │     ChromaDB       │
+                  │  (Vector Database) │
+                  │   ./rag_db/        │
+                  └────────────────────┘
 ```
 
-## Prerequisites
+### 🔑 Key Architecture Decisions
 
-1. **Python 3.9+**
+1. **Database Locking Solution**: Only the web server opens ChromaDB. The MCP server queries RAG via HTTP API to avoid file locking conflicts.
+
+2. **AsyncIO Architecture**: AsyncClientManager runs in a background thread with its own event loop, allowing Flask (synchronous) to work seamlessly with MCP clients (asynchronous).
+
+3. **Session Management**: Each browser session gets its own MCP client instance, maintained throughout the session lifecycle.
+
+## 📋 Prerequisites
+
+1. **Python 3.9+** (tested with Python 3.13)
 2. **Ollama** installed and running
    - Install from: https://ollama.ai/
-   - Pull a model: `ollama pull llama3.2`
+   - Pull the llama3.2 model: `ollama pull llama3.2`
+3. **Git** (for cloning the repository)
 
-## Installation
+## 🚀 Quick Start
 
-1. Clone the repository:
+### For Windows Users (Recommended)
+
+1. **Clone the repository:**
+```powershell
+git clone <repository-url>
+cd MCP_Server_Mahendran
+```
+
+2. **Run the startup script:**
+```powershell
+.\start_windows.bat
+```
+
+The script will automatically:
+- ✅ Check if Ollama is running
+- ✅ Verify llama3.2 model is installed
+- ✅ Create virtual environment if needed
+- ✅ Install all dependencies
+- ✅ Start the web server
+
+3. **Open your browser:**
+```
+http://localhost:5000
+```
+
+**For detailed Windows setup, see [WINDOWS_SETUP.md](WINDOWS_SETUP.md)**
+
+### For Linux/Mac Users
+
+1. **Clone the repository:**
 ```bash
 git clone <repository-url>
 cd MCP_Server_Mahendran
 ```
 
-2. Create a virtual environment:
+2. **Create and activate virtual environment:**
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-3. Install dependencies:
+3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Verify Ollama is running:
+4. **Start Ollama (if not running):**
 ```bash
-ollama list
+ollama serve
 ```
 
-## Usage
-
-### Quick Start
-
-Run the main application:
+5. **In another terminal, pull the model:**
 ```bash
-python main.py
+ollama pull llama3.2
 ```
 
-Choose from:
-1. **Interactive Mode**: Ask questions in real-time
-2. **Demo Mode**: See pre-configured examples
-
-### Interactive Mode
-
+6. **Start the web server:**
 ```bash
-python main.py
-# Select option 1
-
-💬 You: What is 25 multiplied by 4?
-# The assistant will use the calculator tool to compute the result
-
-💬 You: What's the weather in Paris?
-# The assistant will use the weather tool to fetch weather data
-
-💬 You: Calculate 100 divided by 5
-# Another calculation example
+python web_server.py
 ```
 
-### Demo Mode
-
-```bash
-python main.py
-# Select option 2
-# Watch automated demonstrations of all features
+7. **Open your browser:**
+```
+http://localhost:5000
 ```
 
-### Direct Client Usage
+## 🧪 Testing Ollama Connectivity
 
-You can also use the client directly in your own scripts:
+If you encounter "Ollama is not running" errors, use the diagnostic script:
 
-```python
-import asyncio
-from langchain_mcp_client import LangChainMCPClient
-
-async def main():
-    client = LangChainMCPClient(model_name="llama3.2")
-
-    try:
-        await client.initialize()
-        result = await client.process_query("What is 15 + 27?")
-        print(result)
-    finally:
-        await client.cleanup()
-
-asyncio.run(main())
+```powershell
+python test_ollama.py
 ```
 
-## Project Structure
+This script tests:
+- ✅ Ollama API endpoint accessibility
+- ✅ llama3.2 model availability
+- ✅ Ollama generation capability
+- ✅ LangChain integration
+
+The script provides detailed error messages and fix suggestions.
+
+**For troubleshooting, see [DEBUG_README.md](DEBUG_README.md)**
+
+## 📁 Project Structure
 
 ```
 MCP_Server_Mahendran/
-├── main.py                       # Main CLI application
-├── langchain_mcp_client.py       # LangChain + Ollama + MCP integration
-├── mcp_server.py                 # MCP server with 5 tools
-├── rag_system.py                 # RAG system with ChromaDB
-├── web_server.py                 # Flask web server
-├── requirements.txt              # Python dependencies
-├── .gitignore                    # Git ignore rules
-├── README.md                     # This file
-├── RAG_README.md                 # Detailed RAG documentation
-├── WEB_FRONTEND_README.md        # Web interface documentation
-├── templates/
-│   └── index.html                # Web frontend with RAG interface
-├── visualization.html            # Interactive flow visualization
-├── uploads/                      # Temporary upload directory
-└── rag_db/                       # ChromaDB vector database
+├── 🌐 Web Interface
+│   ├── web_server.py                    # Flask web server (main entry point)
+│   ├── templates/index.html             # Beautiful responsive web UI
+│   ├── start_windows.bat                # Windows startup script (batch)
+│   └── start_windows.ps1                # Windows startup script (PowerShell)
+│
+├── 🤖 Core System
+│   ├── langchain_mcp_client.py          # LangChain + Ollama + MCP integration
+│   ├── mcp_server.py                    # MCP server with 8 tools
+│   ├── async_client_manager.py          # Background async client manager
+│   └── rag_system.py                    # RAG system with ChromaDB
+│
+├── 🧪 Testing & Diagnostics
+│   ├── test_ollama.py                   # Ollama connectivity diagnostic
+│   ├── test_mcp_server.py               # MCP server tests
+│   └── main.py                          # CLI interface (alternative to web)
+│
+├── 📚 Documentation
+│   ├── README.md                        # This file
+│   ├── WINDOWS_SETUP.md                 # Windows setup guide
+│   ├── DEBUG_README.md                  # Debugging guide
+│   ├── RAG_README.md                    # RAG system documentation
+│   ├── WEB_FRONTEND_README.md           # Web interface documentation
+│   ├── HOW_IT_WORKS.md                  # Technical deep dive
+│   ├── QUICK_REFERENCE.md               # Quick reference guide
+│   └── ADVANCED_FEATURES.md             # Advanced usage
+│
+├── 🎨 Visualizations
+│   ├── visualization.html               # Interactive architecture visualization
+│   ├── tab1-step-by-step.js             # Step-by-step flow (12 steps)
+│   └── tab2-animated.js                 # Animated flowchart (14 steps)
+│
+├── 📦 Other
+│   ├── requirements.txt                 # Python dependencies
+│   ├── .gitignore                       # Git ignore rules
+│   ├── uploads/                         # Temporary upload directory
+│   └── rag_db/                          # ChromaDB vector database
 ```
 
-## MCP Tools
+## 🛠️ Tools Documentation
 
-### Calculator Tool
+### 🔢 Calculator Tool
 
 Performs basic arithmetic operations.
 
@@ -195,7 +256,12 @@ Performs basic arithmetic operations.
 - `a`: First number
 - `b`: Second number
 
-**Example:**
+**Example Query:**
+```
+"What is 25 multiplied by 4?"
+```
+
+**Tool Call:**
 ```json
 {
   "tool": "calculator",
@@ -207,7 +273,7 @@ Performs basic arithmetic operations.
 }
 ```
 
-### Weather Tool
+### 🌤️ Weather Tool
 
 Gets weather information for a city (mock data for demonstration).
 
@@ -215,199 +281,109 @@ Gets weather information for a city (mock data for demonstration).
 - `city`: City name (required)
 - `units`: "celsius" or "fahrenheit" (default: "celsius")
 
-**Example:**
-```json
-{
-  "tool": "weather",
-  "arguments": {
-    "city": "Paris",
-    "units": "celsius"
-  }
-}
+**Example Query:**
+```
+"What's the weather in Paris?"
 ```
 
-### Gold Price Tool
+### 💰 Gold Price Tool
 
 Gets live market gold prices in multiple currencies.
 
 **Parameters:**
 - `currency`: "USD", "EUR", "GBP", or "INR" (default: "USD")
 
-**Example:**
-```json
-{
-  "tool": "gold_price",
-  "arguments": {
-    "currency": "USD"
-  }
-}
+**Example Query:**
+```
+"What's the current gold price in USD?"
 ```
 
-**Sample Output:**
-```
-💰 Live Gold Price
-────────────────────────────────
-Price: USD 2,050.25 per troy ounce
-24h Change: +0.75% (+USD 15.23)
-Currency: USD
-Updated: 2025-11-14 10:30:00
+### 📧 Email Tool
 
-Market Status: 🟢 Open
-```
-
-### Email Tool
-
-Send emails with subject and body to recipients (simulated for demo).
+Send emails (simulated for demonstration).
 
 **Parameters:**
-- `to`: Recipient email address (required)
-- `subject`: Email subject line (required)
-- `body`: Email body content (required)
+- `to`: Recipient email address
+- `subject`: Email subject line
+- `body`: Email body content
 
-**Example:**
-```json
-{
-  "tool": "send_email",
-  "arguments": {
-    "to": "user@example.com",
-    "subject": "Gold Price Alert",
-    "body": "Current gold price is $2,050 per ounce"
-  }
-}
+**Example Query:**
+```
+"Send an email to user@example.com with subject 'Gold Alert' saying the price is $2,050"
 ```
 
-**Sample Output:**
-```
-📧 Email Sent Successfully!
-────────────────────────────────
-To: user@example.com
-Subject: Gold Price Alert
-Sent: 2025-11-14 10:30:00
+### 📚 RAG Query Tool
 
-Message Preview:
-Current gold price is $2,050 per ounce
-
-Status: ✅ Delivered
-```
-
-### RAG (Retrieval-Augmented Generation) Tool
-
-Search uploaded documents using semantic similarity and natural language queries.
+Search uploaded documents using semantic similarity.
 
 **Parameters:**
 - `query`: The question or search query (required)
-- `n_results`: Number of relevant documents to retrieve (optional, default: 3)
+- `n_results`: Number of relevant documents (optional, default: 3)
 
-**Example:**
-```json
-{
-  "tool": "rag_query",
-  "arguments": {
-    "query": "What does the document say about AI?",
-    "n_results": 3
-  }
-}
+**Example Query:**
 ```
-
-**Sample Output:**
-```
-📚 RAG Query Results
-────────────────────────────────
-Query: What does the document say about AI?
-Found: 3 relevant document(s)
-
-Result #1 (Relevance: High)
-────────────────────────────────
-Artificial Intelligence (AI) is the simulation of human
-intelligence processes by machines, especially computer systems...
-
-Metadata: ai_guide.pdf | Length: 450 chars
-────────────────────────────────
-💡 Tip: You can use this information to answer your question!
+"What do my documents say about Python programming?"
 ```
 
 **Features:**
 - Upload documents via web interface (TXT, PDF, DOC, DOCX, JSON, MD, CSV)
 - Semantic search using vector embeddings
-- Automatic document chunking for better retrieval
-- Relevance scoring and ranking
-- ChromaDB vector database for efficient search
+- Automatic document chunking
+- ChromaDB vector database
+- **Uses HTTP API to avoid database locking**
 
 **For detailed RAG documentation, see [RAG_README.md](RAG_README.md)**
 
-## Configuration
+### 💻 Code Execution Tool
 
-### Changing the Ollama Model
+Execute Python code safely with output capture.
 
-Edit the model name in `main.py` or `langchain_mcp_client.py`:
+**Parameters:**
+- `code`: Python code to execute
 
-```python
-client = LangChainMCPClient(model_name="llama3.2")  # Change to your preferred model
+**Example Query:**
+```
+"Execute this Python code: print('Hello World')"
 ```
 
-Available models (install with `ollama pull <model>`):
-- llama3.2
-- llama3.1
-- mistral
-- phi3
-- And more...
+**Security:** Runs in restricted environment with limited builtins.
 
-### Adding Custom Tools
+### 🌐 Web Scraping Tool
 
-To add new tools to the MCP server:
+Extract text and links from web pages.
 
-1. Add the tool definition in `mcp_server.py` in the `list_tools()` method
-2. Implement the tool logic as a new method
-3. Add the tool handler in the `call_tool()` method
+**Parameters:**
+- `url`: The URL to scrape
+- `extract_links`: Whether to extract links (optional, default: false)
 
-Example:
-
-```python
-# In list_tools()
-Tool(
-    name="my_custom_tool",
-    description="Description of what it does",
-    inputSchema={
-        "type": "object",
-        "properties": {
-            "param1": {
-                "type": "string",
-                "description": "Parameter description"
-            }
-        },
-        "required": ["param1"]
-    }
-)
-
-# Implement the tool
-async def my_custom_tool(self, arguments: dict) -> list[TextContent]:
-    param1 = arguments.get("param1")
-    # Your logic here
-    return [TextContent(type="text", text=f"Result: {param1}")]
-
-# In call_tool()
-elif name == "my_custom_tool":
-    return await self.my_custom_tool(arguments)
+**Example Query:**
+```
+"Scrape the text from https://example.com"
 ```
 
-## Web Interface
+### 📁 File Operations Tool
 
-### Starting the Web Server
+Read, write, list files and directories.
 
-Launch the beautiful web interface with RAG support:
+**Parameters:**
+- `operation`: "read", "write", "list", or "exists"
+- `path`: File or directory path
+- `content`: Content to write (only for write operation)
 
-```bash
-python web_server.py
+**Example Query:**
+```
+"Read the file at ./example.txt"
 ```
 
-Then open your browser to: **http://localhost:5000**
+## 🌐 Web Interface
 
-### Web Interface Features
+### Features
 
 ✅ **Interactive Chat**
 - Real-time conversation with AI agent
 - Beautiful gradient UI design
 - Message history and timestamps
+- Session persistence
 
 ✅ **RAG Document Upload**
 - Drag-and-drop file upload
@@ -416,105 +392,155 @@ Then open your browser to: **http://localhost:5000**
 - Database statistics display
 
 ✅ **Tool Integration**
-- Quick action buttons for all 5 tools
+- Quick action buttons for all 8 tools
 - Tool sidebar with examples
 - One-click query templates
 
-✅ **Session Management**
-- Persistent conversations
-- Clear conversation history
-- Per-session state management
+✅ **Status Indicators**
+- Connection status (Ollama, MCP Client)
+- Toast notifications for important events
+- Real-time feedback
 
-**For detailed web interface documentation, see [WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)**
+### API Endpoints
 
-## Documentation
+```
+POST   /api/initialize        - Initialize MCP client session
+POST   /api/query             - Send query to AI agent
+POST   /api/rag/upload        - Upload document to RAG system
+POST   /api/rag/query         - Query RAG database (used by MCP server)
+GET    /api/rag/stats         - Get RAG database statistics
+GET    /api/rag/documents     - Get all documents in RAG
+POST   /api/rag/clear         - Clear RAG database
+GET    /api/test/ollama       - Test Ollama connectivity
+GET    /api/tools             - Get available tools
+```
 
-This project includes comprehensive documentation:
+**For detailed API documentation, see [WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)**
 
-- **[README.md](README.md)** (this file) - Main project documentation
-- **[RAG_README.md](RAG_README.md)** - Complete RAG system guide
-  - Document upload and management
-  - Query examples and best practices
-  - API documentation
-  - Troubleshooting guide
-  - Advanced usage patterns
-- **[WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)** - Web interface guide
-  - Quick start instructions
-  - API endpoints
-  - Customization options
-  - Deployment guide
+## ⚙️ Configuration
 
-## Troubleshooting
+### Changing the Ollama Model
 
-### Ollama Connection Issues
+Edit `langchain_mcp_client.py` (line 90):
 
-If you get connection errors:
-1. Make sure Ollama is running: `ollama serve`
-2. Check if the model is installed: `ollama list`
-3. Pull the model if needed: `ollama pull llama3.2`
+```python
+self.llm = ChatOllama(
+    model="llama3.2",  # Change to your preferred model
+    temperature=0,
+)
+```
 
-### MCP Server Not Starting
+Available models (install with `ollama pull <model>`):
+- `llama3.2` (recommended, 3B parameters)
+- `llama3.1` (8B parameters)
+- `mistral` (7B parameters)
+- `phi3` (3.8B parameters)
 
-1. Check if port is already in use
-2. Verify Python version is 3.9+
-3. Reinstall dependencies: `pip install -r requirements.txt --force-reinstall`
+### Changing Web Server Port
 
-### Import Errors
+Edit `web_server.py` (last line):
+
+```python
+app.run(debug=True, host='0.0.0.0', port=5000)  # Change port here
+```
+
+## 🐛 Troubleshooting
+
+### ❌ "Ollama is not running" Error
+
+**Solution:**
+1. Run the diagnostic script: `python test_ollama.py`
+2. Check if Ollama is running: `ollama serve`
+3. Verify model is installed: `ollama list`
+4. Pull model if needed: `ollama pull llama3.2`
+
+**For detailed troubleshooting, see [DEBUG_README.md](DEBUG_README.md) and [WINDOWS_SETUP.md](WINDOWS_SETUP.md)**
+
+### ❌ "Connection closed" Error
+
+This error was caused by ChromaDB database locking. **It has been fixed!**
+
+**Solution:** The MCP server now uses HTTP API for RAG queries instead of direct database access. No action needed.
+
+### ❌ Port 5000 Already in Use
+
+**Windows:**
+```powershell
+netstat -ano | findstr :5000
+taskkill /PID <PID> /F
+```
+
+**Linux/Mac:**
+```bash
+lsof -i :5000
+kill -9 <PID>
+```
+
+Or change the port in `web_server.py`.
+
+### ❌ Import Errors
 
 Make sure you're in the virtual environment:
 ```bash
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+source venv/bin/activate  # Linux/Mac
+.\venv\Scripts\Activate.ps1  # Windows PowerShell
 ```
 
-### RAG Issues
-
-**No documents found:**
-1. Check if documents were uploaded: Click "🔄 Refresh Stats"
-2. Verify file format is supported
-3. Check server logs for processing errors
-
-**Upload fails:**
-1. Ensure file is under 16MB
-2. Check file extension is supported
-3. Verify disk space for `./rag_db` directory
-
-**Low relevance results:**
-1. Rephrase query using document terminology
-2. Upload more relevant documents
-3. Try requesting more results (n_results=5)
-
-**For detailed RAG troubleshooting, see [RAG_README.md](RAG_README.md)**
-
-## Development
-
-### Running Tests
-
+Then reinstall dependencies:
 ```bash
-# Add your tests here
-pytest tests/
+pip install -r requirements.txt --force-reinstall
 ```
 
-### Code Style
+## 📚 Documentation
 
-Format code with black:
-```bash
-pip install black
-black *.py
-```
+Comprehensive documentation is available:
 
-## Contributing
+- **[README.md](README.md)** - Main documentation (this file)
+- **[WINDOWS_SETUP.md](WINDOWS_SETUP.md)** - Windows setup and troubleshooting
+- **[DEBUG_README.md](DEBUG_README.md)** - Debugging and diagnostics guide
+- **[RAG_README.md](RAG_README.md)** - Complete RAG system documentation
+- **[WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)** - Web interface guide
+- **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** - Technical deep dive
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick command reference
+- **[ADVANCED_FEATURES.md](ADVANCED_FEATURES.md)** - Advanced usage patterns
+
+## 🎨 Visualization
+
+Open `visualization.html` in your browser to see:
+
+**Tab 1 - Step-by-Step Flow (12 Steps):**
+1. Browser Opens Web Interface
+2. Browser Initializes Session
+3. AsyncClientManager Creates Client
+4. MCP Client Connects to Server (NO ChromaDB access)
+5. Initialize Ollama LLM
+6. User Asks Question
+7. Web Server Routes to Client
+8. LLM Analyzes Question (8 tools available)
+9. Extract Tool Call
+10. MCP Server Executes Tool (RAG uses HTTP API)
+11. LLM Formats Final Answer
+12. Display Answer in Browser
+
+**Tab 2 - Animated Flowchart (14 Steps):**
+- Interactive animated diagram
+- Shows data packets flowing through system
+- Playback controls with speed adjustment
+- Message log panel
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Submit a pull request
+4. Test with `python test_ollama.py`
+5. Submit a pull request
 
-## License
+## 📝 License
 
 MIT License - feel free to use this project for any purpose.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - [LangChain](https://python.langchain.com/) - Framework for LLM applications
 - [Ollama](https://ollama.ai/) - Local LLM inference
@@ -522,13 +548,16 @@ MIT License - feel free to use this project for any purpose.
 - [ChromaDB](https://www.trychroma.com/) - Vector database for RAG
 - [Flask](https://flask.palletsprojects.com/) - Web framework for Python
 
-## Support
+## 💬 Support
 
 For issues and questions:
+- Run diagnostic: `python test_ollama.py`
+- Check [DEBUG_README.md](DEBUG_README.md)
+- Check [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for Windows-specific issues
 - Open an issue on GitHub
-- Check the troubleshooting section above
-- Review Ollama documentation: https://github.com/ollama/ollama
 
 ---
 
-**Made with ❤️ for the AI community**
+**🚀 Made with ❤️ for the AI community**
+
+**✨ Key Features:** Web Interface • 8 Tools • RAG System • AsyncIO • ChromaDB • No Database Locking
