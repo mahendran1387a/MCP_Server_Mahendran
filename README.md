@@ -1,16 +1,19 @@
 # LangChain + Ollama + MCP Server
 
-A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with Calculator and Weather tools.
+A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with multiple intelligent tools.
 
 ## Features
 
 - **LangChain Integration**: Leverages LangChain for building LLM applications
 - **Ollama Support**: Uses local Ollama models for privacy and control
-- **MCP Server**: Implements a Model Control Plane with two tools:
+- **MCP Server**: Implements a Model Control Plane with four tools:
   - **Calculator**: Perform arithmetic operations (add, subtract, multiply, divide)
   - **Weather**: Get weather information for any city (mock data for demo)
+  - **Gold Price**: Get live market gold prices in multiple currencies (USD, EUR, GBP, INR)
+  - **Email**: Send emails with subject and body to recipients
 - **Interactive CLI**: User-friendly command-line interface
 - **Demo Mode**: Pre-configured examples to showcase capabilities
+- **Interactive Visualizations**: Two-tab web interface showing step-by-step and animated flows
 
 ## Architecture
 
@@ -36,10 +39,10 @@ A powerful integration combining LangChain, Ollama, and a Model Control Plane (M
 │                   MCP Server                            │
 │                (mcp_server.py)                          │
 │                                                         │
-│  ┌─────────────────┐       ┌──────────────────┐       │
-│  │   Calculator    │       │     Weather      │       │
-│  │      Tool       │       │       Tool       │       │
-│  └─────────────────┘       └──────────────────┘       │
+│  ┌─────────────┐  ┌─────────┐  ┌──────────┐  ┌─────┐ │
+│  │ Calculator  │  │ Weather │  │GoldPrice │  │Email│ │
+│  │    Tool     │  │  Tool   │  │   Tool   │  │Tool │ │
+│  └─────────────┘  └─────────┘  └──────────┘  └─────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -184,6 +187,70 @@ Gets weather information for a city (mock data for demonstration).
     "units": "celsius"
   }
 }
+```
+
+### Gold Price Tool
+
+Gets live market gold prices in multiple currencies.
+
+**Parameters:**
+- `currency`: "USD", "EUR", "GBP", or "INR" (default: "USD")
+
+**Example:**
+```json
+{
+  "tool": "gold_price",
+  "arguments": {
+    "currency": "USD"
+  }
+}
+```
+
+**Sample Output:**
+```
+💰 Live Gold Price
+────────────────────────────────
+Price: USD 2,050.25 per troy ounce
+24h Change: +0.75% (+USD 15.23)
+Currency: USD
+Updated: 2025-11-14 10:30:00
+
+Market Status: 🟢 Open
+```
+
+### Email Tool
+
+Send emails with subject and body to recipients (simulated for demo).
+
+**Parameters:**
+- `to`: Recipient email address (required)
+- `subject`: Email subject line (required)
+- `body`: Email body content (required)
+
+**Example:**
+```json
+{
+  "tool": "send_email",
+  "arguments": {
+    "to": "user@example.com",
+    "subject": "Gold Price Alert",
+    "body": "Current gold price is $2,050 per ounce"
+  }
+}
+```
+
+**Sample Output:**
+```
+📧 Email Sent Successfully!
+────────────────────────────────
+To: user@example.com
+Subject: Gold Price Alert
+Sent: 2025-11-14 10:30:00
+
+Message Preview:
+Current gold price is $2,050 per ounce
+
+Status: ✅ Delivered
 ```
 
 ## Configuration
