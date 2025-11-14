@@ -578,6 +578,216 @@
             border-radius: 4px;
         }
 
+        /* Architecture Tab Styles */
+        .architecture-view {
+            padding: 40px;
+            background: #f8f9fa;
+            min-height: 600px;
+        }
+
+        .architecture-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .architecture-layer {
+            background: white;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .architecture-layer:hover {
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .layer-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .layer-icon {
+            font-size: 1.5em;
+        }
+
+        .layer-content {
+            padding: 25px;
+        }
+
+        .arch-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.8;
+        }
+
+        .arch-box strong {
+            color: #667eea;
+            font-size: 1.1em;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .arch-arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 10px 0;
+            animation: pulse-arrow 2s infinite;
+        }
+
+        @keyframes pulse-arrow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+
+        .arch-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .arch-split-left, .arch-split-right {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tool-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .arch-highlight {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.95em;
+        }
+
+        .arch-highlight strong {
+            color: #856404;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .key-decisions {
+            margin-top: 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .key-decisions h3 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+
+        .decision-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .decision-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .decision-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .decision-title {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .decision-content {
+            line-height: 1.8;
+            font-size: 0.9em;
+        }
+
+        .decision-content strong {
+            color: #333;
+        }
+
+        .flow-summary {
+            margin-top: 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .flow-summary h3 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+
+        .flow-steps {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-left: 30px;
+        }
+
+        .flow-steps li {
+            margin: 15px 0;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .flow-steps li strong {
+            color: #667eea;
+        }
+
+        .browser-layer .layer-header { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .webserver-layer .layer-header { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .asyncmanager-layer .layer-header { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
+        .mcpclient-layer .layer-header { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); }
+        .ollama-layer .layer-header { background: linear-gradient(135deg, #f39c12 0%, #d68910 100%); }
+        .mcpserver-layer .layer-header { background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); }
+        .tools-layer .layer-header { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); }
+        .chromadb-layer .layer-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+
         @media (max-width: 1200px) {
             .interactive-flow, .flowchart-layout {
                 grid-template-columns: 1fr;
@@ -586,6 +796,14 @@
             .controls, .controls-panel, .messages-panel {
                 border: none;
                 border-bottom: 2px solid #e0e0e0;
+            }
+
+            .arch-split, .decision-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -606,6 +824,10 @@
             <button class="tab-button" data-tab="animated">
                 <span class="tab-icon">🎬</span>
                 Animated Flowchart
+            </button>
+            <button class="tab-button" data-tab="architecture">
+                <span class="tab-icon">🏗️</span>
+                Complete Architecture
             </button>
         </div>
 
@@ -741,6 +963,213 @@
                 <div class="messages-panel">
                     <h3>📨 Message Flow</h3>
                     <div class="message-log" id="messageLog"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Complete Architecture -->
+        <div class="tab-content" id="architecture">
+            <div class="architecture-view">
+                <div class="architecture-container">
+                    <h2 style="text-align: center; color: #667eea; margin-bottom: 30px;">
+                        🏗️ Complete System Architecture
+                    </h2>
+
+                    <div class="architecture-layer browser-layer">
+                        <div class="layer-header">
+                            <span class="layer-icon">🌐</span>
+                            <span class="layer-title">Browser</span>
+                        </div>
+                        <div class="layer-content">
+                            <div class="arch-box">
+                                <strong>http://localhost:5000</strong><br>
+                                <span class="detail">User interacts with web interface</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arch-arrow">↓ HTTP/JSON</div>
+
+                    <div class="architecture-layer webserver-layer">
+                        <div class="layer-header">
+                            <span class="layer-icon">⚡</span>
+                            <span class="layer-title">Web Server (Flask)</span>
+                        </div>
+                        <div class="layer-content">
+                            <div class="arch-box">
+                                <strong>web_server.py</strong><br>
+                                ✅ Opens ChromaDB (SINGLE connection - avoids locking)<br>
+                                ✅ Serves web interface<br>
+                                ✅ Handles file uploads<br>
+                                ✅ Routes to AsyncClientManager<br>
+                                ✅ Provides /api/rag/query endpoint
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arch-arrow">↓</div>
+
+                    <div class="architecture-layer asyncmanager-layer">
+                        <div class="layer-header">
+                            <span class="layer-icon">🔄</span>
+                            <span class="layer-title">AsyncClientManager</span>
+                        </div>
+                        <div class="layer-content">
+                            <div class="arch-box">
+                                <strong>async_client_manager.py</strong><br>
+                                ✅ Background thread with persistent event loop<br>
+                                ✅ Per-session MCP client instances<br>
+                                ✅ asyncio.run_coroutine_threadsafe()<br>
+                                ✅ Bridges sync Flask ↔ async MCP
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arch-arrow">↓</div>
+
+                    <div class="architecture-layer mcpclient-layer">
+                        <div class="layer-header">
+                            <span class="layer-icon">🔌</span>
+                            <span class="layer-title">MCP Client</span>
+                        </div>
+                        <div class="layer-content">
+                            <div class="arch-box">
+                                <strong>langchain_mcp_client.py</strong><br>
+                                ✅ ChatOllama (llama3.2 model)<br>
+                                ✅ LangChain agent with bind_tools()<br>
+                                ✅ MCP wrapper for tool calls<br>
+                                ✅ Connects to MCP server via stdio subprocess
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arch-split">
+                        <div class="arch-split-left">
+                            <div class="arch-arrow">↓ Query</div>
+                            <div class="architecture-layer ollama-layer">
+                                <div class="layer-header">
+                                    <span class="layer-icon">🧠</span>
+                                    <span class="layer-title">Ollama</span>
+                                </div>
+                                <div class="layer-content">
+                                    <div class="arch-box">
+                                        <strong>localhost:11434</strong><br>
+                                        ✅ llama3.2 model<br>
+                                        ✅ Analyzes query<br>
+                                        ✅ Decides which tool to use<br>
+                                        ✅ Formats final answer
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="arch-arrow">↑ Response</div>
+                        </div>
+
+                        <div class="arch-split-right">
+                            <div class="arch-arrow">↓ Tool Calls</div>
+                            <div class="architecture-layer mcpserver-layer">
+                                <div class="layer-header">
+                                    <span class="layer-icon">🛠️</span>
+                                    <span class="layer-title">MCP Server</span>
+                                </div>
+                                <div class="layer-content">
+                                    <div class="arch-box">
+                                        <strong>mcp_server.py</strong><br>
+                                        ⚠️ Does NOT open ChromaDB directly<br>
+                                        ✅ RAG queries use HTTP API<br>
+                                        ✅ Executes 8 tools
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="arch-arrow">↓</div>
+                            <div class="architecture-layer tools-layer">
+                                <div class="layer-header">
+                                    <span class="layer-icon">⚙️</span>
+                                    <span class="layer-title">8 Tools + RAG</span>
+                                </div>
+                                <div class="layer-content">
+                                    <div class="tools-grid">
+                                        <div class="tool-item">🔢 Calculator</div>
+                                        <div class="tool-item">🌤️ Weather</div>
+                                        <div class="tool-item">💰 Gold Price</div>
+                                        <div class="tool-item">📧 Email</div>
+                                        <div class="tool-item">📚 RAG Query</div>
+                                        <div class="tool-item">💻 Code Executor</div>
+                                        <div class="tool-item">🌐 Web Scraper</div>
+                                        <div class="tool-item">📁 File Operations</div>
+                                    </div>
+                                    <div class="arch-highlight">
+                                        <strong>⚠️ KEY SOLUTION:</strong><br>
+                                        RAG tool uses HTTP API (POST /api/rag/query)<br>
+                                        No database locking! ✅
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="arch-arrow">↑ Results</div>
+                        </div>
+                    </div>
+
+                    <div class="architecture-layer chromadb-layer" style="margin-top: 20px;">
+                        <div class="layer-header">
+                            <span class="layer-icon">💾</span>
+                            <span class="layer-title">ChromaDB (Vector Database)</span>
+                        </div>
+                        <div class="layer-content">
+                            <div class="arch-box">
+                                <strong>./chroma_db/</strong><br>
+                                ✅ Only accessed by Web Server<br>
+                                ✅ MCP Server queries via HTTP API<br>
+                                ✅ No file locking conflicts!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="key-decisions">
+                        <h3>🎯 Key Architecture Decisions</h3>
+                        <div class="decision-grid">
+                            <div class="decision-card">
+                                <div class="decision-title">1. Single ChromaDB Connection</div>
+                                <div class="decision-content">
+                                    <strong>Why:</strong> Prevents database locking<br>
+                                    <strong>How:</strong> Only web_server.py opens ChromaDB<br>
+                                    <strong>Impact:</strong> No more "Connection closed" errors
+                                </div>
+                            </div>
+                            <div class="decision-card">
+                                <div class="decision-title">2. HTTP API for RAG</div>
+                                <div class="decision-content">
+                                    <strong>Why:</strong> MCP server needs RAG access<br>
+                                    <strong>How:</strong> POST to /api/rag/query endpoint<br>
+                                    <strong>Impact:</strong> Shared RAG without database conflicts
+                                </div>
+                            </div>
+                            <div class="decision-card">
+                                <div class="decision-title">3. AsyncClientManager</div>
+                                <div class="decision-content">
+                                    <strong>Why:</strong> Bridge sync Flask ↔ async MCP<br>
+                                    <strong>How:</strong> Background thread with event loop<br>
+                                    <strong>Impact:</strong> Smooth async/sync integration
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-summary">
+                        <h3>📊 Complete Request Flow</h3>
+                        <ol class="flow-steps">
+                            <li><strong>User</strong> asks question in browser</li>
+                            <li><strong>Flask</strong> receives HTTP POST to /api/query</li>
+                            <li><strong>AsyncClientManager</strong> routes to MCP client</li>
+                            <li><strong>MCP Client</strong> sends to Ollama with tool descriptions</li>
+                            <li><strong>Ollama</strong> analyzes and decides which tool to use</li>
+                            <li><strong>MCP Client</strong> calls MCP server with tool request</li>
+                            <li><strong>MCP Server</strong> executes appropriate tool</li>
+                            <li><strong>RAG Tool</strong> (if used) calls HTTP API → web server → ChromaDB</li>
+                            <li><strong>Other Tools</strong> execute directly (calculator, weather, etc.)</li>
+                            <li><strong>Tool Result</strong> returns to MCP client</li>
+                            <li><strong>Ollama</strong> formats result into natural language</li>
+                            <li><strong>Response</strong> bubbles back through all layers to browser</li>
+                        </ol>
+                    </div>
                 </div>
             </div>
         </div>
