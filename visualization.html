@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 LangChain + Ollama + MCP - Complete Interactive Visualization</title>
+    <title>🚀 LangChain + Ollama + MCP - Interactive Visualization</title>
     <style>
         * {
             margin: 0;
@@ -102,17 +102,16 @@
             background: var(--bg-secondary);
             border-bottom: 3px solid var(--active-color);
             overflow-x: auto;
-            flex-wrap: wrap;
         }
 
         .tab-button {
             flex: 1;
-            min-width: 150px;
+            min-width: 200px;
             padding: 20px 15px;
             background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 1em;
+            font-size: 1.1em;
             font-weight: bold;
             color: var(--text-secondary);
             transition: all 0.3s;
@@ -188,36 +187,6 @@
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
         }
 
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1em;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: var(--active-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-success {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .btn-danger {
-            background: var(--error-color);
-            color: white;
-        }
-
         /* Architecture Layers */
         .architecture-layer {
             background: var(--bg-primary);
@@ -269,7 +238,7 @@
         }
 
         .layer-content {
-            padding: 25px;
+            padding: 0;
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.5s ease-in-out, padding 0.5s;
@@ -318,7 +287,7 @@
         /* Tools Grid */
         .tools-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
             margin: 30px 0;
         }
@@ -383,7 +352,7 @@
 
         .tool-demo {
             margin-top: 15px;
-            padding: 15px;
+            padding: 0;
             background: var(--bg-secondary);
             border-radius: 8px;
             font-family: 'Courier New', monospace;
@@ -406,266 +375,262 @@
             color: var(--active-color);
         }
 
-        /* Comparison View */
-        .comparison-container {
+        /* Interactive Flow & Flowchart Styles */
+        .interactive-flow {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 30px 0;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            min-height: 600px;
         }
 
-        .comparison-side {
+        .controls {
             background: var(--bg-primary);
-            border-radius: 12px;
+            padding: 30px;
+            border-right: 2px solid var(--border-color);
+        }
+
+        .visualization {
+            padding: 40px;
+        }
+
+        .component {
+            background: white;
+            border: 3px solid var(--border-color);
+            border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .comparison-side.before {
-            border: 3px solid var(--error-color);
-        }
-
-        .comparison-side.after {
-            border: 3px solid var(--success-color);
-        }
-
-        .comparison-title {
-            text-align: center;
-            font-size: 1.5em;
-            font-weight: bold;
             margin-bottom: 20px;
+            transition: all 0.5s;
         }
 
-        .comparison-side.before .comparison-title {
-            color: var(--error-color);
+        .component.active {
+            border-color: var(--active-color);
+            background: #f0f4ff;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transform: scale(1.02);
         }
 
-        .comparison-side.after .comparison-title {
-            color: var(--success-color);
+        .query-section {
+            margin-bottom: 30px;
         }
 
-        .comparison-diagram {
-            background: var(--bg-secondary);
-            padding: 20px;
+        .query-section h3 {
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .query-buttons, .query-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .query-btn, .query-option {
+            padding: 12px 15px;
+            background: white;
+            border: 2px solid var(--active-color);
             border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            white-space: pre-line;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .query-btn:hover, .query-option:hover {
+            background: var(--active-color);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .query-btn.active, .query-option.selected {
+            background: var(--active-color);
+            color: white;
+        }
+
+        .step-controls, .playback-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn.next, .control-btn.play { background: var(--success-color); color: white; }
+        .control-btn.prev { background: #2196F3; color: white; }
+        .control-btn.reset { background: var(--error-color); color: white; }
+        .control-btn.pause { background: var(--warning-color); color: white; }
+
+        .control-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .step-counter, .step-info {
+            text-align: center;
+            font-size: 1.2em;
+            color: var(--active-color);
+            font-weight: bold;
             margin: 15px 0;
         }
 
-        .error-indicator {
-            color: var(--error-color);
+        .step-info .current {
+            font-size: 2em;
             font-weight: bold;
-            animation: blink 1s infinite;
+            color: var(--active-color);
         }
 
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .success-indicator {
-            color: var(--success-color);
-            font-weight: bold;
-        }
-
-        /* Error Scenarios */
-        .error-list {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .error-item {
-            background: var(--bg-primary);
-            border-radius: 12px;
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
         }
 
-        .error-header {
-            background: linear-gradient(135deg, var(--error-color) 0%, #c62828 100%);
-            color: white;
-            padding: 15px 25px;
-            cursor: pointer;
+        .progress-fill {
+            background: linear-gradient(90deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        /* Flowchart Layout */
+        .flowchart-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 0;
+            min-height: 700px;
+        }
+
+        .controls-panel {
+            background: var(--bg-primary);
+            padding: 25px;
+            border-right: 2px solid var(--border-color);
+        }
+
+        .flowchart-panel {
+            background: #fafbfc;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .messages-panel {
+            background: var(--bg-primary);
+            padding: 25px;
+            border-left: 2px solid var(--border-color);
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        #flowchart {
+            width: 100%;
+            height: 100%;
+            min-height: 700px;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            font-size: 1.1em;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 8px;
         }
 
-        .error-content {
-            padding: 0;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s, padding 0.5s;
+        .speed-control {
+            margin-top: 10px;
         }
 
-        .error-item.expanded .error-content {
-            padding: 25px;
-            max-height: 800px;
+        .speed-control label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
         }
 
-        .solution-box {
-            background: rgba(76, 175, 80, 0.1);
-            border-left: 4px solid var(--success-color);
+        .speed-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--active-color);
+            cursor: pointer;
+        }
+
+        .message-log {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            background: var(--bg-secondary);
             padding: 15px;
-            border-radius: 5px;
-            margin-top: 15px;
-        }
-
-        .solution-box h4 {
-            color: var(--success-color);
-            margin-bottom: 10px;
-        }
-
-        /* Performance Metrics */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .metric-card {
-            background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+            opacity: 0.3;
             transition: all 0.3s;
         }
 
-        .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        .message.active {
+            opacity: 1;
+            border-left-color: var(--active-color);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
         }
 
-        .metric-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: var(--active-color);
-            margin: 10px 0;
-        }
-
-        .metric-label {
+        .message .timestamp {
+            font-size: 0.8em;
             color: var(--text-secondary);
-            font-size: 0.9em;
+            margin-bottom: 5px;
         }
 
-        .timeline {
-            position: relative;
-            margin: 30px 0;
-            padding-left: 30px;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: var(--active-color);
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 30px;
-            padding-left: 30px;
-        }
-
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -33px;
-            top: 5px;
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background: var(--active-color);
-            border: 3px solid var(--bg-primary);
-        }
-
-        .timeline-step {
-            background: var(--bg-primary);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .timeline-time {
-            color: var(--active-color);
+        .message .from-to {
             font-weight: bold;
-            font-size: 0.9em;
+            color: var(--active-color);
+            margin-bottom: 8px;
         }
 
-        /* Live Testing */
-        .test-panel {
+        .message .content {
             background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 25px;
-            margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .test-controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .test-result {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
             font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+            font-size: 0.85em;
             white-space: pre-wrap;
-            max-height: 400px;
-            overflow-y: auto;
+            word-break: break-word;
         }
 
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-indicator.online {
-            background: var(--success-color);
-            box-shadow: 0 0 10px var(--success-color);
-        }
-
-        .status-indicator.offline {
-            background: var(--error-color);
-            box-shadow: 0 0 10px var(--error-color);
-        }
-
-        .status-indicator.testing {
-            background: var(--warning-color);
-            box-shadow: 0 0 10px var(--warning-color);
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.7; }
-        }
-
-        /* Flowchart SVG Styles */
-        .flowchart-container {
-            background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 30px;
-            margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
+        /* SVG Node and Edge Styles */
         .node {
             cursor: pointer;
             transition: all 0.3s;
@@ -716,19 +681,35 @@
             to { stroke-dashoffset: -20; }
         }
 
+        .data-packet {
+            r: 8;
+            fill: #ff5722;
+            filter: drop-shadow(0 0 10px rgba(255, 87, 34, 0.8));
+            opacity: 0;
+        }
+
+        .data-packet.active {
+            opacity: 1;
+        }
+
+        .node.pulsing {
+            animation: pulse-node 1s infinite;
+        }
+
+        @keyframes pulse-node {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
-            .comparison-container {
-                grid-template-columns: 1fr;
-            }
-
             .tools-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             }
 
             .tab-button {
-                min-width: 120px;
-                font-size: 0.9em;
+                min-width: 150px;
+                font-size: 1em;
                 padding: 15px 10px;
             }
         }
@@ -747,6 +728,10 @@
                 margin-top: 15px;
                 display: inline-block;
             }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -754,48 +739,32 @@
     <div class="container">
         <div class="header">
             <h1>🚀 LangChain + Ollama + MCP</h1>
-            <p>Complete Interactive Visualization | 8 Tools | RAG System | AsyncIO Architecture</p>
+            <p>Interactive Visualization | 8 Tools | RAG System | AsyncIO Architecture</p>
             <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
         </div>
 
         <!-- Tab Navigation -->
         <div class="tab-navigation">
-            <button class="tab-button active" data-tab="overview">
+            <button class="tab-button active" data-tab="architecture">
                 <span class="tab-icon">🏗️</span>
-                Architecture
+                Complete Architecture
             </button>
             <button class="tab-button" data-tab="flow">
                 <span class="tab-icon">📋</span>
-                Step Flow
+                Step-by-Step Flow
             </button>
             <button class="tab-button" data-tab="animated">
                 <span class="tab-icon">🎬</span>
-                Animated
+                Animated Flowchart
             </button>
             <button class="tab-button" data-tab="tools">
                 <span class="tab-icon">⚙️</span>
-                Tools
-            </button>
-            <button class="tab-button" data-tab="comparison">
-                <span class="tab-icon">🔄</span>
-                Before/After
-            </button>
-            <button class="tab-button" data-tab="errors">
-                <span class="tab-icon">⚠️</span>
-                Errors
-            </button>
-            <button class="tab-button" data-tab="performance">
-                <span class="tab-icon">📊</span>
-                Performance
-            </button>
-            <button class="tab-button" data-tab="testing">
-                <span class="tab-icon">🧪</span>
-                Live Test
+                8 Tools Showcase
             </button>
         </div>
 
-        <!-- Tab 1: Complete Architecture Overview -->
-        <div class="tab-content active" id="overview">
+        <!-- Tab 1: Complete Architecture -->
+        <div class="tab-content active" id="architecture">
             <div class="content-wrapper">
                 <h2 class="section-title">🏗️ Complete System Architecture</h2>
 
@@ -1073,19 +1042,104 @@
             </div>
         </div>
 
-        <!-- Tab 2: Step-by-Step Flow (Placeholder - will be populated by external JS) -->
+        <!-- Tab 2: Step-by-Step Flow -->
         <div class="tab-content" id="flow">
             <div class="content-wrapper">
                 <h2 class="section-title">📋 Step-by-Step Interactive Flow</h2>
-                <div id="stepFlowContainer"></div>
+                <div class="interactive-flow">
+                    <div class="controls">
+                        <div class="query-section">
+                            <h3>📝 Select a Query</h3>
+                            <div class="query-buttons">
+                                <button class="query-btn active" data-query="calculator">
+                                    🔢 "What is 25 × 4?"
+                                </button>
+                                <button class="query-btn" data-query="rag">
+                                    📚 "Documents about Python?"
+                                </button>
+                                <button class="query-btn" data-query="combined">
+                                    💰 "Gold price + 5%?"
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill1"></div>
+                        </div>
+
+                        <div class="step-counter">
+                            <div>Step <span id="currentStep1">1</span> of <span id="totalSteps1">12</span></div>
+                        </div>
+
+                        <div class="step-controls">
+                            <button class="control-btn next" id="nextBtn1">Next Step ▶</button>
+                            <button class="control-btn prev" id="prevBtn1">◀ Previous</button>
+                            <button class="control-btn reset" id="resetBtn1">🔄 Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="visualization" id="visualization1"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Tab 3: Animated Flowchart (Placeholder - will be populated by external JS) -->
+        <!-- Tab 3: Animated Flowchart -->
         <div class="tab-content" id="animated">
             <div class="content-wrapper">
                 <h2 class="section-title">🎬 Animated Flowchart</h2>
-                <div id="animatedFlowContainer"></div>
+                <div class="flowchart-layout">
+                    <div class="controls-panel">
+                        <div class="control-section">
+                            <h3>❓ Query</h3>
+                            <div class="query-selector">
+                                <div class="query-option selected" data-query="calculator">
+                                    🔢 "What is 25 × 4?"
+                                </div>
+                                <div class="query-option" data-query="rag">
+                                    📚 "Documents about Python?"
+                                </div>
+                                <div class="query-option" data-query="combined">
+                                    💰 "Gold price + 5%?"
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill2"></div>
+                        </div>
+
+                        <div class="step-info">
+                            <div class="current" id="currentStep2">1</div>
+                            <div class="total">of <span id="totalSteps2">14</span> steps</div>
+                        </div>
+
+                        <div class="control-section">
+                            <h3>▶️ Playback</h3>
+                            <div class="playback-controls">
+                                <button class="control-btn play" id="playBtn">▶ Play</button>
+                                <button class="control-btn pause" id="pauseBtn" style="display:none;">⏸ Pause</button>
+                                <button class="control-btn next" id="nextBtn2">Next ▶</button>
+                                <button class="control-btn prev" id="prevBtn2">◀ Previous</button>
+                                <button class="control-btn reset" id="resetBtn2">🔄 Reset</button>
+                            </div>
+
+                            <div class="speed-control">
+                                <label>Speed: <span id="speedValue">1.0</span>x</label>
+                                <input type="range" class="speed-slider" id="speedSlider"
+                                       min="0.5" max="3" step="0.5" value="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flowchart-panel">
+                        <svg id="flowchart"></svg>
+                    </div>
+
+                    <div class="messages-panel">
+                        <h3>📨 Message Flow</h3>
+                        <div class="message-log" id="messageLog"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1251,530 +1305,10 @@
                 </div>
             </div>
         </div>
-
-        <!-- Tab 5: Before/After Comparison -->
-        <div class="tab-content" id="comparison">
-            <div class="content-wrapper">
-                <h2 class="section-title">🔄 Before/After: Database Locking Solution</h2>
-
-                <div class="comparison-container">
-                    <div class="comparison-side before">
-                        <div class="comparison-title">❌ BEFORE (Problematic)</div>
-
-                        <div class="comparison-diagram">
-Browser → Web Server
-              ├── Opens ChromaDB ✅
-              └── Routes to MCP Client
-                      └── MCP Server
-                          └── <span class="error-indicator">❌ TRIES to open ChromaDB</span>
-                                  <span class="error-indicator">⚠️ DATABASE LOCKED!</span>
-                                  <span class="error-indicator">💥 Connection closed error</span>
-                        </div>
-
-                        <div class="card">
-                            <h4 style="color: var(--error-color);">Problems:</h4>
-                            <ul style="line-height: 2; padding-left: 25px;">
-                                <li>Both web_server.py and mcp_server.py try to open ChromaDB</li>
-                                <li>ChromaDB uses file-based locking</li>
-                                <li>Second connection attempt fails</li>
-                                <li>MCP server subprocess crashes</li>
-                                <li>Error: "Connection closed"</li>
-                                <li>Misdiagnosed as "Ollama is not running"</li>
-                            </ul>
-                        </div>
-
-                        <div class="card" style="background: rgba(244, 67, 54, 0.1); border: 2px solid var(--error-color);">
-                            <h4 style="color: var(--error-color);">Code Issue:</h4>
-                            <pre style="background: var(--bg-secondary); padding: 15px; border-radius: 5px; overflow-x: auto;">
-# mcp_server.py (OLD - BROKEN)
-class MCPServer:
-    def __init__(self):
-        self.server = Server("langchain-ollama-mcp")
-        <span class="error-indicator">self.rag_system = RAGSystem()  # ❌ Opens ChromaDB</span>
-        self.setup_handlers()
-                            </pre>
-                        </div>
-                    </div>
-
-                    <div class="comparison-side after">
-                        <div class="comparison-title">✅ AFTER (Fixed)</div>
-
-                        <div class="comparison-diagram">
-Browser → Web Server
-              ├── Opens ChromaDB ✅ (ONLY connection)
-              ├── <span class="success-indicator">✅ Provides /api/rag/query endpoint</span>
-              └── Routes to MCP Client
-                      └── MCP Server
-                          └── <span class="success-indicator">✅ Uses HTTP API for RAG</span>
-                                  <span class="success-indicator">POST /api/rag/query</span>
-                                  <span class="success-indicator">🎉 No database access!</span>
-                        </div>
-
-                        <div class="card">
-                            <h4 style="color: var(--success-color);">Solutions:</h4>
-                            <ul style="line-height: 2; padding-left: 25px;">
-                                <li>✅ Only web_server.py opens ChromaDB</li>
-                                <li>✅ MCP server uses HTTP API for RAG queries</li>
-                                <li>✅ Added /api/rag/query POST endpoint</li>
-                                <li>✅ No more database locking conflicts</li>
-                                <li>✅ No more "Connection closed" errors</li>
-                                <li>✅ System works flawlessly!</li>
-                            </ul>
-                        </div>
-
-                        <div class="card" style="background: rgba(76, 175, 80, 0.1); border: 2px solid var(--success-color);">
-                            <h4 style="color: var(--success-color);">Code Fix:</h4>
-                            <pre style="background: var(--bg-secondary); padding: 15px; border-radius: 5px; overflow-x: auto;">
-# mcp_server.py (NEW - FIXED)
-class MCPServer:
-    def __init__(self):
-        self.server = Server("langchain-ollama-mcp")
-        <span class="success-indicator"># Don't initialize RAG system here</span>
-        <span class="success-indicator"># RAG queries use HTTP API instead</span>
-        self.setup_handlers()
-
-async def rag_query_tool(self, arguments: dict):
-    <span class="success-indicator"># Make HTTP request to web server</span>
-    req = urllib.request.Request(
-        <span class="success-indicator">"http://localhost:5000/api/rag/query"</span>,
-        data=json.dumps(arguments).encode('utf-8')
-    )
-    response = urllib.request.urlopen(req)
-    return response
-                            </pre>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 30px; text-align: center;">
-                    <h3 style="color: var(--active-color); margin-bottom: 15px;">💡 Key Takeaway</h3>
-                    <p style="font-size: 1.2em; line-height: 1.8;">
-                        By using an <strong>HTTP API architecture</strong>, we solved the database locking problem while maintaining full RAG functionality.
-                        This is a <strong>production-ready</strong> solution that scales well and prevents concurrent access issues.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 6: Error Scenarios -->
-        <div class="tab-content" id="errors">
-            <div class="content-wrapper">
-                <h2 class="section-title">⚠️ Common Errors & Solutions</h2>
-
-                <div class="error-list">
-                    <div class="error-item" onclick="toggleError(this)">
-                        <div class="error-header">
-                            <span>❌ Error: "Ollama is not running"</span>
-                            <span>▼</span>
-                        </div>
-                        <div class="error-content">
-                            <h4>Symptoms:</h4>
-                            <ul style="padding-left: 25px; margin: 10px 0;">
-                                <li>Browser shows "Ollama is not running" message</li>
-                                <li>But Ollama IS running (port 11434 is bound)</li>
-                                <li>Server logs show "Connection closed"</li>
-                            </ul>
-
-                            <h4 style="margin-top: 20px;">Root Cause:</h4>
-                            <p>This error message is misleading! The real problem is <strong>ChromaDB database locking</strong>, not Ollama.</p>
-
-                            <div class="solution-box">
-                                <h4>✅ Solution:</h4>
-                                <ol style="padding-left: 25px;">
-                                    <li>Run diagnostic: <code>python test_ollama.py</code></li>
-                                    <li>If Ollama test passes, it's not Ollama!</li>
-                                    <li>Check if you're using the fixed version with HTTP API for RAG</li>
-                                    <li>Ensure mcp_server.py doesn't open ChromaDB directly</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="error-item" onclick="toggleError(this)">
-                        <div class="error-header">
-                            <span>❌ Error: "Connection closed"</span>
-                            <span>▼</span>
-                        </div>
-                        <div class="error-content">
-                            <h4>Symptoms:</h4>
-                            <ul style="padding-left: 25px; margin: 10px 0;">
-                                <li>MCP server subprocess crashes</li>
-                                <li>Error in logs: "mcp.shared.exceptions.McpError: Connection closed"</li>
-                                <li>Happens during MCP client initialization</li>
-                            </ul>
-
-                            <h4 style="margin-top: 20px;">Root Cause:</h4>
-                            <p>MCP server tries to open ChromaDB while web server already has it open. File locking prevents second connection.</p>
-
-                            <div class="solution-box">
-                                <h4>✅ Solution:</h4>
-                                <ol style="padding-left: 25px;">
-                                    <li>Use the fixed architecture with HTTP API</li>
-                                    <li>Verify mcp_server.py uses urllib.request for RAG</li>
-                                    <li>Check web_server.py has /api/rag/query endpoint</li>
-                                    <li>Restart the web server</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="error-item" onclick="toggleError(this)">
-                        <div class="error-header">
-                            <span>❌ Error: Ollama not accessible</span>
-                            <span>▼</span>
-                        </div>
-                        <div class="error-content">
-                            <h4>Symptoms:</h4>
-                            <ul style="padding-left: 25px; margin: 10px 0;">
-                                <li>Connection refused to localhost:11434</li>
-                                <li>Actual Ollama connectivity issue</li>
-                            </ul>
-
-                            <div class="solution-box">
-                                <h4>✅ Solution:</h4>
-                                <ol style="padding-left: 25px;">
-                                    <li><strong>Windows:</strong> Run <code>ollama serve</code> in PowerShell</li>
-                                    <li><strong>Linux/Mac:</strong> Run <code>ollama serve &</code></li>
-                                    <li>Ensure llama3.2 model is pulled: <code>ollama pull llama3.2</code></li>
-                                    <li>Check port 11434 is not blocked by firewall</li>
-                                    <li>Run diagnostic: <code>python test_ollama.py</code></li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="error-item" onclick="toggleError(this)">
-                        <div class="error-header">
-                            <span>❌ Error: AsyncIO event loop issues</span>
-                            <span>▼</span>
-                        </div>
-                        <div class="error-content">
-                            <h4>Symptoms:</h4>
-                            <ul style="padding-left: 25px; margin: 10px 0;">
-                                <li>"RuntimeError: This event loop is already running"</li>
-                                <li>"Cannot run async function in sync context"</li>
-                            </ul>
-
-                            <div class="solution-box">
-                                <h4>✅ Solution:</h4>
-                                <p>Use AsyncClientManager with background thread and asyncio.run_coroutine_threadsafe()</p>
-                                <pre style="background: var(--bg-secondary); padding: 15px; border-radius: 5px; margin-top: 10px;">
-future = asyncio.run_coroutine_threadsafe(
-    self._create_client(session_id, model_name),
-    self.loop
-)
-result = future.result(timeout=30)
-                                </pre>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="error-item" onclick="toggleError(this)">
-                        <div class="error-header">
-                            <span>⚠️ Warning: Module not found</span>
-                            <span>▼</span>
-                        </div>
-                        <div class="error-content">
-                            <h4>Symptoms:</h4>
-                            <ul style="padding-left: 25px; margin: 10px 0;">
-                                <li>ImportError: No module named 'langchain'</li>
-                                <li>ImportError: No module named 'mcp'</li>
-                            </ul>
-
-                            <div class="solution-box">
-                                <h4>✅ Solution:</h4>
-                                <ol style="padding-left: 25px;">
-                                    <li>Activate virtual environment: <code>source venv/bin/activate</code> (Linux/Mac) or <code>venv\Scripts\activate</code> (Windows)</li>
-                                    <li>Install dependencies: <code>pip install -r requirements.txt</code></li>
-                                    <li>Verify installation: <code>pip list | grep langchain</code></li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 30px;">
-                    <h3 style="color: var(--active-color); margin-bottom: 15px;">🔧 Diagnostic Tools</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                        <div class="detail-item">
-                            <strong>test_ollama.py</strong>
-                            Comprehensive Ollama connectivity test<br>
-                            Usage: <code>python test_ollama.py</code>
-                        </div>
-                        <div class="detail-item">
-                            <strong>start_windows.bat</strong>
-                            Windows startup script<br>
-                            Starts Ollama + web server automatically
-                        </div>
-                        <div class="detail-item">
-                            <strong>DEBUG_README.md</strong>
-                            Detailed debugging guide<br>
-                            Step-by-step troubleshooting
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 7: Performance Metrics -->
-        <div class="tab-content" id="performance">
-            <div class="content-wrapper">
-                <h2 class="section-title">📊 Performance Metrics & Timing</h2>
-
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-label">Total Request Time</div>
-                        <div class="metric-value">~2-5s</div>
-                        <div class="metric-label">End-to-end response</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-label">LLM Processing</div>
-                        <div class="metric-value">1-3s</div>
-                        <div class="metric-label">Ollama inference</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-label">Tool Execution</div>
-                        <div class="metric-value">100-500ms</div>
-                        <div class="metric-label">Average tool time</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-label">RAG Query</div>
-                        <div class="metric-value">200-800ms</div>
-                        <div class="metric-label">Vector search + HTTP</div>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 30px;">
-                    <h3 style="color: var(--active-color); margin-bottom: 20px;">⏱️ Request Timeline Breakdown</h3>
-
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">0ms - 50ms</div>
-                                <strong>Browser → Flask</strong><br>
-                                HTTP request, session lookup, route to AsyncClientManager
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">50ms - 100ms</div>
-                                <strong>AsyncClientManager</strong><br>
-                                Get/create MCP client, prepare async call
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">100ms - 150ms</div>
-                                <strong>MCP Client → Ollama</strong><br>
-                                Send query with tool descriptions to LLM
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">150ms - 2000ms</div>
-                                <strong>Ollama Processing</strong><br>
-                                Analyze query, decide tool, generate structured output<br>
-                                <em>(This is the slowest part - LLM inference)</em>
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">2000ms - 2050ms</div>
-                                <strong>MCP Client → MCP Server</strong><br>
-                                Call tool via stdio subprocess
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">2050ms - 2500ms</div>
-                                <strong>Tool Execution</strong><br>
-                                Execute calculator/weather/RAG/etc.<br>
-                                RAG: Additional HTTP call to /api/rag/query (200-800ms)
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">2500ms - 2550ms</div>
-                                <strong>MCP Server → MCP Client</strong><br>
-                                Return tool result
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">2550ms - 4000ms</div>
-                                <strong>Ollama Formatting</strong><br>
-                                LLM formats tool result into natural language response
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-step">
-                                <div class="timeline-time">4000ms - 4100ms</div>
-                                <strong>Response Chain</strong><br>
-                                MCP Client → AsyncClientManager → Flask → Browser
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 30px;">
-                    <h3 style="color: var(--active-color); margin-bottom: 20px;">🚀 Performance Optimizations</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                        <div class="detail-item">
-                            <strong>✅ HTTP API for RAG</strong>
-                            Eliminates database locking overhead<br>
-                            Saves ~500ms per RAG query
-                        </div>
-                        <div class="detail-item">
-                            <strong>✅ Persistent Event Loop</strong>
-                            AsyncClientManager keeps loop running<br>
-                            No setup/teardown overhead per request
-                        </div>
-                        <div class="detail-item">
-                            <strong>✅ Session-based Clients</strong>
-                            MCP clients persist per session<br>
-                            No reconnection overhead
-                        </div>
-                        <div class="detail-item">
-                            <strong>✅ Local LLM</strong>
-                            Ollama runs locally (no network latency)<br>
-                            Faster than cloud API calls
-                        </div>
-                        <div class="detail-item">
-                            <strong>✅ Vector Database</strong>
-                            ChromaDB provides fast semantic search<br>
-                            O(log n) search complexity
-                        </div>
-                        <div class="detail-item">
-                            <strong>✅ Minimal Dependencies</strong>
-                            Clean architecture = less overhead<br>
-                            Fast startup and low memory
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 30px;">
-                    <h3 style="color: var(--active-color); margin-bottom: 15px;">📈 Scaling Considerations</h3>
-                    <ul style="padding-left: 25px; line-height: 2;">
-                        <li><strong>Current:</strong> Single-threaded Flask + background AsyncIO thread</li>
-                        <li><strong>Bottleneck:</strong> Ollama LLM inference (1-3s per query)</li>
-                        <li><strong>Concurrent Users:</strong> ~5-10 with current setup</li>
-                        <li><strong>To Scale:</strong>
-                            <ul style="padding-left: 25px; margin-top: 10px;">
-                                <li>Deploy with Gunicorn (multiple workers)</li>
-                                <li>Use Redis for session management</li>
-                                <li>Load balance multiple Ollama instances</li>
-                                <li>Add request queuing system</li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 8: Live Connection Testing -->
-        <div class="tab-content" id="testing">
-            <div class="content-wrapper">
-                <h2 class="section-title">🧪 Live Connection Testing</h2>
-
-                <div class="test-panel">
-                    <h3 style="color: var(--active-color); margin-bottom: 15px;">System Status</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                        <div class="card">
-                            <span class="status-indicator offline" id="webServerStatus"></span>
-                            <strong>Web Server</strong><br>
-                            <span id="webServerText">Not tested</span>
-                        </div>
-                        <div class="card">
-                            <span class="status-indicator offline" id="ollamaStatus"></span>
-                            <strong>Ollama</strong><br>
-                            <span id="ollamaText">Not tested</span>
-                        </div>
-                        <div class="card">
-                            <span class="status-indicator offline" id="ragStatus"></span>
-                            <strong>RAG System</strong><br>
-                            <span id="ragText">Not tested</span>
-                        </div>
-                        <div class="card">
-                            <span class="status-indicator offline" id="mcpStatus"></span>
-                            <strong>MCP Client</strong><br>
-                            <span id="mcpText">Not tested</span>
-                        </div>
-                    </div>
-
-                    <div class="test-controls">
-                        <button class="btn btn-primary" onclick="testAllConnections()">🔍 Test All Connections</button>
-                        <button class="btn btn-success" onclick="testWebServer()">⚡ Test Web Server</button>
-                        <button class="btn btn-success" onclick="testOllama()">🧠 Test Ollama</button>
-                        <button class="btn btn-success" onclick="testRAG()">📚 Test RAG API</button>
-                    </div>
-
-                    <div class="test-result" id="testResults">
-Click "Test All Connections" to check system status...
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 30px;">
-                    <h3 style="color: var(--active-color); margin-bottom: 15px;">💡 What These Tests Check</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
-                        <div class="detail-item">
-                            <strong>Web Server Test</strong>
-                            Verifies Flask is running on localhost:5000<br>
-                            Checks if /api endpoints are accessible
-                        </div>
-                        <div class="detail-item">
-                            <strong>Ollama Test</strong>
-                            Checks if Ollama is running on localhost:11434<br>
-                            Verifies llama3.2 model availability
-                        </div>
-                        <div class="detail-item">
-                            <strong>RAG API Test</strong>
-                            Tests /api/rag/query endpoint<br>
-                            Verifies HTTP API architecture is working
-                        </div>
-                        <div class="detail-item">
-                            <strong>MCP Client Test</strong>
-                            Sends test query through full stack<br>
-                            End-to-end integration test
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 20px;">
-                    <h3 style="color: var(--active-color); margin-bottom: 15px;">🔧 Troubleshooting Guide</h3>
-                    <div class="detail-item">
-                        <strong>If Web Server fails:</strong><br>
-                        1. Check if web_server.py is running<br>
-                        2. Verify port 5000 is not in use<br>
-                        3. Check firewall settings<br>
-                        4. Run: <code>python web_server.py</code>
-                    </div>
-                    <div class="detail-item" style="margin-top: 15px;">
-                        <strong>If Ollama fails:</strong><br>
-                        1. Start Ollama: <code>ollama serve</code><br>
-                        2. Pull model: <code>ollama pull llama3.2</code><br>
-                        3. Run diagnostic: <code>python test_ollama.py</code><br>
-                        4. Check port 11434 availability
-                    </div>
-                    <div class="detail-item" style="margin-top: 15px;">
-                        <strong>If RAG API fails:</strong><br>
-                        1. Ensure web server is running<br>
-                        2. Check if /api/rag/query endpoint exists<br>
-                        3. Verify ChromaDB is initialized<br>
-                        4. Check web_server.py has RAG endpoint code
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
+    <script src="tab1-step-by-step.js"></script>
+    <script src="tab2-animated.js"></script>
     <script>
         // Theme Toggle
         function toggleTheme() {
@@ -1795,6 +1329,12 @@ Click "Test All Connections" to check system status...
                 // Update content visibility
                 document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
                 document.getElementById(tabName).classList.add('active');
+
+                // Reinitialize flowchart if switching to animated tab
+                if (tabName === 'animated' && typeof initFlowchart === 'function') {
+                    initFlowchart();
+                    animateStep(currentStep2);
+                }
             });
         });
 
@@ -1813,133 +1353,7 @@ Click "Test All Connections" to check system status...
             element.classList.toggle('active');
         }
 
-        // Error Item Toggle
-        function toggleError(element) {
-            element.classList.toggle('expanded');
-        }
-
-        // Live Testing Functions
-        function updateStatus(elementId, textId, status, message) {
-            const indicator = document.getElementById(elementId);
-            const text = document.getElementById(textId);
-
-            indicator.className = 'status-indicator ' + status;
-            text.textContent = message;
-        }
-
-        function addTestResult(message, type = 'info') {
-            const results = document.getElementById('testResults');
-            const timestamp = new Date().toLocaleTimeString();
-            const color = type === 'success' ? 'var(--success-color)' :
-                         type === 'error' ? 'var(--error-color)' :
-                         'var(--text-primary)';
-
-            results.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
-            results.scrollTop = results.scrollHeight;
-        }
-
-        async function testWebServer() {
-            updateStatus('webServerStatus', 'webServerText', 'testing', 'Testing...');
-            addTestResult('🔍 Testing Web Server connection...', 'info');
-
-            try {
-                const response = await fetch('http://localhost:5000/');
-                if (response.ok) {
-                    updateStatus('webServerStatus', 'webServerText', 'online', 'Online ✅');
-                    addTestResult('✅ Web Server is running on localhost:5000', 'success');
-                } else {
-                    throw new Error('Server returned non-OK status');
-                }
-            } catch (error) {
-                updateStatus('webServerStatus', 'webServerText', 'offline', 'Offline ❌');
-                addTestResult('❌ Web Server not accessible: ' + error.message, 'error');
-            }
-        }
-
-        async function testOllama() {
-            updateStatus('ollamaStatus', 'ollamaText', 'testing', 'Testing...');
-            addTestResult('🔍 Testing Ollama connection...', 'info');
-
-            try {
-                const response = await fetch('http://localhost:11434/api/version');
-                if (response.ok) {
-                    const data = await response.json();
-                    updateStatus('ollamaStatus', 'ollamaText', 'online', 'Online ✅');
-                    addTestResult('✅ Ollama is running: ' + data.version, 'success');
-                } else {
-                    throw new Error('Ollama not responding');
-                }
-            } catch (error) {
-                updateStatus('ollamaStatus', 'ollamaText', 'offline', 'Offline ❌');
-                addTestResult('❌ Ollama not accessible. Run: ollama serve', 'error');
-            }
-        }
-
-        async function testRAG() {
-            updateStatus('ragStatus', 'ragText', 'testing', 'Testing...');
-            addTestResult('🔍 Testing RAG API endpoint...', 'info');
-
-            try {
-                const response = await fetch('http://localhost:5000/api/rag/query', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({query: 'test', n_results: 1})
-                });
-
-                if (response.ok) {
-                    updateStatus('ragStatus', 'ragText', 'online', 'Online ✅');
-                    addTestResult('✅ RAG API endpoint is working (HTTP API architecture)', 'success');
-                } else {
-                    throw new Error('RAG API returned error');
-                }
-            } catch (error) {
-                updateStatus('ragStatus', 'ragText', 'offline', 'Offline ❌');
-                addTestResult('❌ RAG API not accessible: ' + error.message, 'error');
-            }
-        }
-
-        async function testMCPClient() {
-            updateStatus('mcpStatus', 'mcpText', 'testing', 'Testing...');
-            addTestResult('🔍 Testing MCP Client (end-to-end)...', 'info');
-
-            try {
-                const response = await fetch('http://localhost:5000/api/query', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({query: 'What is 2 + 2?'})
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    updateStatus('mcpStatus', 'mcpText', 'online', 'Online ✅');
-                    addTestResult('✅ MCP Client working: ' + data.response, 'success');
-                } else {
-                    throw new Error('MCP Client query failed');
-                }
-            } catch (error) {
-                updateStatus('mcpStatus', 'mcpText', 'offline', 'Error ❌');
-                addTestResult('❌ MCP Client error: ' + error.message, 'error');
-            }
-        }
-
-        async function testAllConnections() {
-            document.getElementById('testResults').innerHTML = '🧪 Starting comprehensive system test...\n\n';
-
-            await testWebServer();
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            await testOllama();
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            await testRAG();
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            await testMCPClient();
-
-            addTestResult('\n✅ All tests completed!', 'success');
-        }
-
-        // Initialize - expand first layer
+        // Initialize - expand first layer on load
         document.addEventListener('DOMContentLoaded', () => {
             const firstLayer = document.querySelector('.architecture-layer');
             if (firstLayer) {
