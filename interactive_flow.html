@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LangChain + Ollama + MCP - Interactive Flow Visualization</title>
+    <title>Advanced AI Framework - Interactive Flow Visualization</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -30,31 +30,59 @@
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 40px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 2.5em;
+            font-size: 3em;
             margin-bottom: 10px;
         }
 
         .header p {
-            font-size: 1.2em;
+            font-size: 1.3em;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
             opacity: 0.9;
         }
 
         .main-content {
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 350px 1fr;
             gap: 0;
-            min-height: 600px;
+            min-height: 700px;
         }
 
         .controls {
             background: #f8f9fa;
             padding: 30px;
             border-right: 2px solid #e0e0e0;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
         }
 
         .query-section {
@@ -64,6 +92,18 @@
         .query-section h3 {
             margin-bottom: 15px;
             color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .capability-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: bold;
+            margin-left: auto;
         }
 
         .query-buttons {
@@ -81,6 +121,7 @@
             transition: all 0.3s;
             text-align: left;
             font-size: 0.9em;
+            position: relative;
         }
 
         .query-btn:hover {
@@ -94,10 +135,26 @@
             color: white;
         }
 
+        .query-btn .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
+
+        .query-btn.active .badge {
+            background: white;
+            color: #667eea;
+        }
+
         .step-controls {
             display: flex;
             flex-direction: column;
             gap: 10px;
+            margin-top: 20px;
         }
 
         .control-btn {
@@ -147,6 +204,8 @@
         .visualization {
             padding: 40px;
             position: relative;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
         }
 
         .component {
@@ -175,8 +234,8 @@
         }
 
         .component-icon {
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             background: #667eea;
             color: white;
             border-radius: 50%;
@@ -184,6 +243,7 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            font-size: 1.2em;
         }
 
         .data-box {
@@ -284,11 +344,61 @@
             color: #6a9955;
         }
 
+        .architecture-diagram {
+            background: #e8f4f8;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .architecture-diagram h4 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .module {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .module:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .module-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .module-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .module-tools {
+            font-size: 0.8em;
+            color: #666;
+        }
+
         .legend {
             background: #e8f4f8;
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
         .legend h4 {
@@ -298,20 +408,22 @@
 
         .legend-items {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 8px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 0.9em;
         }
 
         .legend-color {
             width: 20px;
             height: 20px;
             border-radius: 4px;
+            flex-shrink: 0;
         }
 
         .progress-bar {
@@ -328,7 +440,24 @@
             transition: width 0.5s;
         }
 
-        @media (max-width: 768px) {
+        .highlight-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .highlight-box.visible {
+            opacity: 1;
+        }
+
+        .highlight-box h4 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 1024px) {
             .main-content {
                 grid-template-columns: 1fr;
             }
@@ -336,6 +465,11 @@
             .controls {
                 border-right: none;
                 border-bottom: 2px solid #e0e0e0;
+                max-height: none;
+            }
+
+            .visualization {
+                max-height: none;
             }
         }
 
@@ -352,24 +486,60 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 Interactive Flow Visualization</h1>
-            <p>LangChain + Ollama + MCP Server</p>
+            <h1>🚀 Advanced AI Framework</h1>
+            <p>LangChain + Ollama + MCP Server - Interactive Visualization</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">31+</div>
+                    <div class="stat-label">Tools</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">10</div>
+                    <div class="stat-label">Domains</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Local</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">AI Agents</div>
+                </div>
+            </div>
         </div>
 
         <div class="main-content">
             <!-- Controls Sidebar -->
             <div class="controls">
                 <div class="query-section">
-                    <h3>📝 Select a Query</h3>
+                    <h3>🎯 Select Capability</h3>
                     <div class="query-buttons">
-                        <button class="query-btn active" data-query="calculator">
-                            "What is 25 × 4?"
+                        <button class="query-btn active" data-query="rag">
+                            📚 RAG: "Index and query PDFs"
+                            <span class="badge">NEW</span>
                         </button>
-                        <button class="query-btn" data-query="weather">
-                            "Weather in Paris?"
+                        <button class="query-btn" data-query="image">
+                            🎨 Image Gen: "Generate cyberpunk city"
+                            <span class="badge">NEW</span>
                         </button>
-                        <button class="query-btn" data-query="combined">
-                            "50 + 30 and weather in Tokyo"
+                        <button class="query-btn" data-query="code">
+                            💻 Code: "Execute Python code"
+                            <span class="badge">NEW</span>
+                        </button>
+                        <button class="query-btn" data-query="data">
+                            📊 Data: "Analyze CSV and visualize"
+                            <span class="badge">NEW</span>
+                        </button>
+                        <button class="query-btn" data-query="web">
+                            🌐 Web: "Scrape article content"
+                            <span class="badge">NEW</span>
+                        </button>
+                        <button class="query-btn" data-query="calculator">
+                            🔢 Calculator: "What is 25 × 4?"
+                        </button>
+                        <button class="query-btn" data-query="multiagent">
+                            🤖 Multi-Agent: "Research & Report"
+                            <span class="badge">NEW</span>
                         </button>
                     </div>
                 </div>
@@ -379,7 +549,7 @@
                 </div>
 
                 <div class="step-counter">
-                    <div>Step <span id="currentStep">1</span> of <span id="totalSteps">9</span></div>
+                    <div>Step <span id="currentStep">1</span> of <span id="totalSteps">7</span></div>
                 </div>
 
                 <div class="step-controls">
@@ -403,6 +573,10 @@
                             <div class="legend-color" style="background: #ffc107;"></div>
                             <span>Explanation</span>
                         </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #2196F3;"></div>
+                            <span>Key Feature</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -415,162 +589,311 @@
     </div>
 
     <script>
-        // Query configurations
+        // Query configurations for different capabilities
         const queries = {
+            rag: {
+                name: "RAG System",
+                icon: "📚",
+                question: "Index ./research.pdf and answer: What are the key findings?",
+                capability: "Document Intelligence with Vector Search",
+                steps: 7,
+                modules: ["RAG System", "Vector Store", "Document Processor", "FAISS"],
+                description: "Index documents and use semantic search to answer questions"
+            },
+            image: {
+                name: "Image Generation",
+                icon: "🎨",
+                question: "Generate an image of a cyberpunk city at sunset",
+                capability: "Local Stable Diffusion",
+                steps: 6,
+                modules: ["Image Generator", "Stable Diffusion", "GPU/CPU"],
+                description: "Generate images from text using local AI models"
+            },
+            code: {
+                name: "Code Execution",
+                icon: "💻",
+                question: "Execute: print([x**2 for x in range(10)])",
+                capability: "Safe Python Sandbox",
+                steps: 6,
+                modules: ["Code Executor", "Sandbox", "Analysis"],
+                description: "Execute and analyze Python code safely"
+            },
+            data: {
+                name: "Data Analysis",
+                icon: "📊",
+                question: "Load sales.csv, analyze, and create bar chart",
+                capability: "Pandas + Visualization",
+                steps: 7,
+                modules: ["Data Analyzer", "Pandas", "Matplotlib", "Seaborn"],
+                description: "Analyze data and create visualizations"
+            },
+            web: {
+                name: "Web Scraping",
+                icon: "🌐",
+                question: "Extract text from https://example.com/article",
+                capability: "Async Web Tools",
+                steps: 6,
+                modules: ["Web Scraper", "BeautifulSoup", "Aiohttp"],
+                description: "Scrape and extract content from websites"
+            },
             calculator: {
+                name: "Calculator",
+                icon: "🔢",
                 question: "What is 25 × 4?",
-                toolNeeded: "calculator",
-                toolArgs: {operation: "multiply", a: 25, b: 4},
-                toolResult: "Result: 25 multiply 4 = 100",
-                finalAnswer: "The result of 25 multiplied by 4 is 100."
+                capability: "Basic Arithmetic",
+                steps: 7,
+                modules: ["Calculator Tool", "MCP Server"],
+                description: "Basic calculator operations"
             },
-            weather: {
-                question: "What's the weather in Paris?",
-                toolNeeded: "weather",
-                toolArgs: {city: "Paris", units: "celsius"},
-                toolResult: "Weather in Paris: 20°C, Sunny, Humidity: 65%, Wind: 15 km/h",
-                finalAnswer: "The weather in Paris is 20°C and sunny with 65% humidity."
-            },
-            combined: {
-                question: "Calculate 50 + 30, and also tell me the weather in Tokyo",
-                toolNeeded: "calculator",
-                toolArgs: {operation: "add", a: 50, b: 30},
-                toolResult: "Result: 50 add 30 = 80",
-                finalAnswer: "50 + 30 = 80. Weather in Tokyo is 18°C and cloudy."
+            multiagent: {
+                name: "Multi-Agent System",
+                icon: "🤖",
+                question: "Research topic, analyze data, write report",
+                capability: "6 Specialized Agents",
+                steps: 8,
+                modules: ["Multi-Agent Orchestrator", "Researcher", "Analyst", "Writer", "Critic"],
+                description: "Coordinate multiple AI agents for complex tasks"
             }
         };
 
-        let currentQuery = queries.calculator;
+        let currentQuery = queries.rag;
         let currentStep = 0;
-        let totalSteps = 9;
+        let totalSteps = currentQuery.steps;
 
-        // Step definitions
+        // Generate steps based on capability
         function getSteps(query) {
-            return [
+            const baseSteps = [
                 {
-                    title: "1️⃣ User Input",
-                    component: "User",
-                    explanation: "The user types a question into the interactive CLI. The question is captured and sent to the LangChain client for processing.",
-                    data: `User Question: "${query.question}"`,
-                    code: `# main.py
-query = input("💬 You: ")  # "${query.question}"
-await client.process_query(query)`
+                    title: "1️⃣ User Query",
+                    component: "User Interface",
+                    explanation: `User requests: "${query.question}". The advanced CLI receives the request and routes it to the appropriate system.`,
+                    data: `Query: ${query.question}\nCapability: ${query.capability}`,
+                    code: `# main.py\nquery = input("💬 You: ")\nawait client.process_query(query)`
                 },
                 {
-                    title: "2️⃣ LangChain Client Receives Query",
-                    component: "LangChain Client",
-                    explanation: "The LangChain client receives the query and prepares to send it to the Ollama LLM. It includes a system prompt that describes all available tools.",
-                    data: `Received: "${query.question}"
-Preparing context with tool descriptions...`,
-                    code: `# langchain_mcp_client.py
-async def process_query(self, query: str):
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": "${query.question}"}
-    ]`
+                    title: "2️⃣ LangChain Client",
+                    component: "Orchestrator",
+                    explanation: "The LangChain client analyzes the query and determines which of the 31+ tools are needed. It has access to all capabilities: RAG, image generation, code execution, data analysis, web scraping, file operations, and more.",
+                    data: `Available Tools: 31+\nActive Modules: ${query.modules.join(", ")}\nSelected Capability: ${query.name}`,
+                    code: `# langchain_mcp_client.py\nmcp_tools = await self.mcp_wrapper.get_tools()\n# Returns 31+ tools across 10 domains`
                 },
                 {
-                    title: "3️⃣ System Prompt with Tools",
-                    component: "LangChain Client",
-                    explanation: "A system prompt is created that tells the LLM about available tools (calculator and weather). This is how the LLM knows what tools it can use.",
-                    data: `System Prompt:
-"You have access to these tools:
-- calculator: add, subtract, multiply, divide
-- weather: get weather for a city
-
-To use a tool, respond with JSON:
-{'tool': 'tool_name', 'arguments': {...}}"`,
-                    code: `# Tool descriptions are automatically fetched from MCP server
-tools = await self.mcp_wrapper.get_tools()
-system_prompt = self._format_tools_description(tools)`
-                },
-                {
-                    title: "4️⃣ Send to Ollama LLM",
-                    component: "Ollama",
-                    explanation: "The question and system prompt are sent to the Ollama LLM (llama3.2 model). The LLM analyzes the question and decides if it needs to use a tool.",
-                    data: `Sending to Ollama (llama3.2)...
-Question: "${query.question}"
-Context: [System prompt with tool descriptions]`,
-                    code: `# LangChain sends to Ollama
-response = self.llm.invoke(messages)
-# Ollama processes and decides action`
-                },
-                {
-                    title: "5️⃣ LLM Decides to Use Tool",
-                    component: "Ollama",
-                    explanation: `The LLM understands that to answer "${query.question}", it needs to use the ${query.toolNeeded} tool. It formats its response as JSON with the tool name and arguments.`,
-                    data: `LLM Response:
-{"tool": "${query.toolNeeded}", "arguments": ${JSON.stringify(query.toolArgs, null, 2)}}`,
-                    code: `# LLM response contains tool call
-response_text = response.content
-# Example: '{"tool": "${query.toolNeeded}", "arguments": {...}}'`
-                },
-                {
-                    title: "6️⃣ Parse and Call MCP Tool",
-                    component: "MCP Client",
-                    explanation: "The LangChain client extracts the tool call from the LLM's response, then calls the MCP server to execute the tool.",
-                    data: `Parsed Tool Call:
-Tool: ${query.toolNeeded}
-Arguments: ${JSON.stringify(query.toolArgs, null, 2)}
-
-Calling MCP Server...`,
-                    code: `# Extract tool call
-tool_call = self._extract_tool_call(response_text)
-
-# Call MCP tool
-result = await self.mcp_wrapper.call_tool(
-    "${query.toolNeeded}",
-    ${JSON.stringify(query.toolArgs, null, 2)}
-)`
-                },
-                {
-                    title: "7️⃣ MCP Server Executes Tool",
-                    component: "MCP Server",
-                    explanation: `The MCP server receives the request and executes the ${query.toolNeeded} tool with the provided arguments. It performs the actual operation and returns the result.`,
-                    data: `Executing: ${query.toolNeeded}
-Input: ${JSON.stringify(query.toolArgs, null, 2)}
-Output: "${query.toolResult}"`,
-                    code: `# mcp_server.py
-async def ${query.toolNeeded}_tool(self, arguments):
-    ${query.toolNeeded === 'calculator' ?
-        `operation = arguments["operation"]  # "${query.toolArgs.operation}"
-    a = arguments["a"]  # ${query.toolArgs.a}
-    b = arguments["b"]  # ${query.toolArgs.b}
-    result = a ${query.toolArgs.operation === 'multiply' ? '*' : '+'} b` :
-        `city = arguments["city"]  # "${query.toolArgs.city}"
-    # Fetch weather data...
-    result = get_weather(city)`}
-    return [TextContent(text=f"${query.toolResult}")]`
-                },
-                {
-                    title: "8️⃣ Send Result to LLM",
-                    component: "Ollama",
-                    explanation: "The tool result is sent back to the LLM. The LLM now has the information it needs to formulate a natural language response for the user.",
-                    data: `Tool Result: "${query.toolResult}"
-
-Asking LLM to format natural response...`,
-                    code: `# Add tool result to conversation
-messages.append({
-    "role": "user",
-    "content": "Tool returned: ${query.toolResult}"
-})
-
-# Ask LLM to formulate answer
-response = self.llm.invoke(messages)`
-                },
-                {
-                    title: "9️⃣ Final Answer to User",
-                    component: "User",
-                    explanation: "The LLM generates a natural language response based on the tool result. This final answer is displayed to the user in the CLI.",
-                    data: `Final Answer:
-"${query.finalAnswer}"`,
-                    code: `# Display to user
-print(f"Final Answer: {response_text}")
-
-# Output shown in terminal:
-# "${query.finalAnswer}"`
+                    title: "3️⃣ System Prompt",
+                    component: "Context Builder",
+                    explanation: "A comprehensive system prompt is built that describes all available tools. The LLM learns about RAG, image generation, code execution, data analysis, web scraping, file operations, Git integration, and more.",
+                    data: `System Prompt includes:\n- RAG tools (4)\n- Image generation (2)\n- Code execution (3)\n- Web tools (4)\n- Data analysis (4)\n- File operations (4)\n- Git operations (3)\n- Document processing (2)\n- And more...`,
+                    code: `system_prompt = f"""You have access to:\n{tools_description}\n\nUse JSON format for tool calls:\n{{"tool": "name", "arguments": {{...}}}}"""`
                 }
             ];
+
+            // Add capability-specific steps
+            if (query.name === "RAG System") {
+                baseSteps.push(
+                    {
+                        title: "4️⃣ RAG Indexing",
+                        component: "Vector Store",
+                        explanation: "The document is processed, chunked, and converted to embeddings using local sentence-transformers model. These embeddings are stored in FAISS for fast semantic search.",
+                        data: `Document: research.pdf\nChunks created: 45\nEmbedding model: all-MiniLM-L6-v2\nVector store: FAISS`,
+                        code: `# rag_system.py\nchunks = doc_processor.chunk_text(text)\nembeddings = model.encode(chunks)\nvector_store.add_documents(chunks, metadata)`
+                    },
+                    {
+                        title: "5️⃣ Semantic Search",
+                        component: "RAG Query",
+                        explanation: "The question is converted to an embedding and compared against indexed documents. FAISS finds the most similar chunks using cosine similarity.",
+                        data: `Query: "What are the key findings?"\nRetrieved chunks: 5\nRelevance scores: [0.92, 0.87, 0.81, 0.79, 0.75]`,
+                        code: `# vector_store.py\nquery_embedding = model.encode([query])\ndistances, indices = index.search(query_embedding, k=5)\nrelevant_docs = [documents[idx] for idx in indices[0]]`
+                    },
+                    {
+                        title: "6️⃣ Context Integration",
+                        component: "LLM Processing",
+                        explanation: "The retrieved document chunks are provided as context to the LLM. The LLM uses this information to generate an accurate, grounded answer.",
+                        data: `Context: [5 relevant document chunks]\nLLM processes context + question\nGenerates answer based on retrieved information`,
+                        code: `messages.append({\n    "role": "system",\n    "content": f"Context: {relevant_docs}"\n})\nresponse = llm.invoke(messages)`
+                    },
+                    {
+                        title: "7️⃣ Final Answer",
+                        component: "User",
+                        explanation: "The LLM returns an answer grounded in the indexed documents. The answer includes citations and relevant passages from the source material.",
+                        data: `Answer with citations:\n"Based on the research paper, the key findings are:\n1. ...\n2. ...\n(Source: research.pdf, pages 3-5)"`,
+                        code: `print(f"Answer: {response}")\nprint(f"Sources: {sources}")`
+                    }
+                );
+            } else if (query.name === "Image Generation") {
+                baseSteps.push(
+                    {
+                        title: "4️⃣ Stable Diffusion Init",
+                        component: "Image Generator",
+                        explanation: "The Stable Diffusion 2.1 model is loaded locally. GPU acceleration (CUDA/MPS) is used if available, otherwise falls back to CPU.",
+                        data: `Model: stabilityai/stable-diffusion-2-1\nDevice: CUDA (GPU)\nOptimizations: Attention slicing enabled`,
+                        code: `# image_generator.py\npipe = StableDiffusionPipeline.from_pretrained(model_id)\npipe = pipe.to("cuda")\npipe.enable_attention_slicing()`
+                    },
+                    {
+                        title: "5️⃣ Image Generation",
+                        component: "Diffusion Process",
+                        explanation: "The text prompt is processed through the diffusion pipeline. Multiple denoising steps progressively generate the image.",
+                        data: `Prompt: "cyberpunk city at sunset"\nSteps: 25\nGuidance: 7.5\nResolution: 512x512\nGeneration time: ~15s`,
+                        code: `result = pipe(\n    prompt=prompt,\n    num_inference_steps=25,\n    guidance_scale=7.5,\n    width=512, height=512\n)\nimage = result.images[0]`
+                    },
+                    {
+                        title: "6️⃣ Result Saved",
+                        component: "User",
+                        explanation: "The generated image is saved to disk and the path is returned to the user. No cloud APIs were used - everything ran locally.",
+                        data: `Image saved: ./data/generated_images/img_1234567890.png\nGeneration time: 15.3s\nCost: $0 (100% local)`,
+                        code: `image.save(output_path)\nreturn {"image_path": output_path, "success": True}`
+                    }
+                );
+            } else if (query.name === "Code Execution") {
+                baseSteps.push(
+                    {
+                        title: "4️⃣ Code Analysis",
+                        component: "Code Executor",
+                        explanation: "The code is first analyzed for safety. Restricted operations like file I/O, subprocess, and network access are blocked.",
+                        data: `Code: print([x**2 for x in range(10)])\nSafety check: ✓ Passed\nRestricted imports: None detected`,
+                        code: `# code_executor.py\nif not self._is_code_safe(code):\n    return {"error": "Code contains restricted operations"}\n# Safe to execute`
+                    },
+                    {
+                        title: "5️⃣ Sandboxed Execution",
+                        component: "Sandbox",
+                        explanation: "Code runs in a restricted environment with limited builtins. stdout/stderr are captured. Execution has a timeout to prevent infinite loops.",
+                        data: `Execution environment: Sandboxed\nTimeout: 5 seconds\nCaptured output: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]`,
+                        code: `with contextlib.redirect_stdout(stdout_capture):\n    exec(code, safe_globals)\nresult = stdout_capture.getvalue()`
+                    },
+                    {
+                        title: "6️⃣ Results Returned",
+                        component: "User",
+                        explanation: "Execution results including stdout, stderr, execution time, and any return values are provided to the user.",
+                        data: `Success: True\nStdout: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]\nExecution time: 0.003s\nMemory: ~50KB`,
+                        code: `return {\n    "success": True,\n    "stdout": output,\n    "execution_time": 0.003\n}`
+                    }
+                );
+            } else if (query.name === "Data Analysis") {
+                baseSteps.push(
+                    {
+                        title: "4️⃣ Data Loading",
+                        component: "Data Analyzer",
+                        explanation: "CSV file is loaded into pandas DataFrame. Data types are inferred and basic statistics are calculated.",
+                        data: `File: sales.csv\nRows: 1000\nColumns: 5 (product, category, price, quantity, revenue)\nMemory: 125 KB`,
+                        code: `# data_analyzer.py\ndf = pd.read_csv(file_path)\nself.dataframes['sales'] = df\nreturn {"shape": df.shape, "columns": list(df.columns)}`
+                    },
+                    {
+                        title: "5️⃣ Statistical Analysis",
+                        component: "Pandas Processing",
+                        explanation: "Statistical summary is generated using pandas describe(). This includes mean, std, min, max, quartiles for numeric columns.",
+                        data: `Statistics:\n- Mean revenue: $12,450\n- Median: $8,200\n- Std dev: $5,320\n- Top category: Electronics`,
+                        code: `summary = df.describe()\nnumeric_cols = df.select_dtypes(include='number').columns\nstats = df[numeric_cols].describe().to_dict()`
+                    },
+                    {
+                        title: "6️⃣ Visualization",
+                        component: "Matplotlib/Seaborn",
+                        explanation: "Bar chart is created showing revenue by product. Chart is saved as PNG with proper labels and formatting.",
+                        data: `Chart type: Bar\nX-axis: Product\nY-axis: Revenue\nSaved: ./data/analysis/sales_bar.png`,
+                        code: `df.plot.bar(x='product', y='revenue')\nplt.xlabel('Product')\nplt.ylabel('Revenue ($)')\nplt.savefig(output_path)`
+                    },
+                    {
+                        title: "7️⃣ Results Delivered",
+                        component: "User",
+                        explanation: "Analysis summary and visualization paths are returned. User can view charts and export data as needed.",
+                        data: `Analysis complete!\nChart: ./data/analysis/sales_bar.png\nTop products identified\nStatistics computed`,
+                        code: `return {\n    "chart_path": output_path,\n    "statistics": summary,\n    "success": True\n}`
+                    }
+                );
+            } else if (query.name === "Web Scraping") {
+                baseSteps.push(
+                    {
+                        title: "4️⃣ HTTP Request",
+                        component: "Web Scraper",
+                        explanation: "Async HTTP request is made to the URL using aiohttp. Headers and timeouts are configured for reliable scraping.",
+                        data: `URL: https://example.com/article\nMethod: GET\nStatus: 200 OK\nContent-Type: text/html\nSize: 45 KB`,
+                        code: `# web_tools.py\nasync with session.get(url, timeout=10) as response:\n    content = await response.text()\n    status = response.status`
+                    },
+                    {
+                        title: "5️⃣ Content Extraction",
+                        component: "BeautifulSoup",
+                        explanation: "HTML is parsed with BeautifulSoup. Main content is extracted while removing navigation, scripts, styles, and ads.",
+                        data: `Parsed HTML structure\nRemoved: nav, footer, script, style\nExtracted: 2,340 words\nTitle: "Article Title"`,
+                        code: `soup = BeautifulSoup(content, 'html.parser')\nfor element in soup(['script', 'style', 'nav']):\n    element.decompose()\ntext = soup.get_text()`
+                    },
+                    {
+                        title: "6️⃣ Clean Text Returned",
+                        component: "User",
+                        explanation: "Cleaned, readable text is returned. The text can be further processed, indexed into RAG, or summarized by the LLM.",
+                        data: `Extracted text: 2,340 words\nTitle: "Article Title"\nCleaned and formatted\nReady for processing`,
+                        code: `return {\n    "success": True,\n    "text": clean_text,\n    "title": title,\n    "word_count": len(words)\n}`
+                    }
+                );
+            } else if (query.name === "Multi-Agent System") {
+                baseSteps.push(
+                    {
+                        title: "4️⃣ Task Decomposition",
+                        component: "Planner Agent",
+                        explanation: "The Planner agent breaks down the complex task into subtasks and assigns them to specialized agents (Researcher, Analyst, Writer, Critic).",
+                        data: `Task: Research topic, analyze data, write report\nDecomposed into:\n1. Research (Researcher)\n2. Analyze (Analyst)\n3. Write (Writer)\n4. Review (Critic)`,
+                        code: `# multi_agent_system.py\nplanner = self.agents[AgentRole.PLANNER]\nplan = await planner.think(task, context)\nsubtasks = plan['steps']`
+                    },
+                    {
+                        title: "5️⃣ Researcher Agent",
+                        component: "Agent: Researcher",
+                        explanation: "Researcher agent uses web scraping and RAG tools to gather information. It searches indexed documents and websites for relevant data.",
+                        data: `Tools used:\n- web_extract_text\n- rag_query\n- summarize_document\nSources found: 5\nInformation gathered`,
+                        code: `researcher = self.agents[AgentRole.RESEARCHER]\nresult = await researcher.think(\n    "Research the topic",\n    {"tools": ["web_extract", "rag_query"]}\n)`
+                    },
+                    {
+                        title: "6️⃣ Analyst & Writer",
+                        component: "Agent Collaboration",
+                        explanation: "Analyst processes the research data, creates visualizations. Writer generates the report using findings from both Researcher and Analyst.",
+                        data: `Analyst: Data processed, 3 charts created\nWriter: Report drafted (1,500 words)\nCombined outputs ready for review`,
+                        code: `analyst_result = await analyst.think(task, research_data)\nwriter_result = await writer.think(task, {**research, **analysis})`
+                    },
+                    {
+                        title: "7️⃣ Critic Review",
+                        component: "Agent: Critic",
+                        explanation: "Critic agent reviews the report for quality, accuracy, and completeness. Suggests improvements and validates findings.",
+                        data: `Quality check: ✓ Passed\nAccuracy: ✓ Sources verified\nCompleteness: ✓ All sections present\nSuggestions: Minor edits`,
+                        code: `critic = self.agents[AgentRole.CRITIC]\nreview = await critic.think("Review report", report)\nfinal_report = apply_suggestions(report, review)`
+                    },
+                    {
+                        title: "8️⃣ Final Deliverable",
+                        component: "User",
+                        explanation: "Complete report with research, analysis, visualizations, and quality review is delivered. All agents contributed their expertise.",
+                        data: `Deliverable:\n- Research report (1,500 words)\n- 3 data visualizations\n- Source citations\n- Quality reviewed`,
+                        code: `return {\n    "report": final_report,\n    "visualizations": charts,\n    "sources": sources,\n    "review": critic_review\n}`
+                    }
+                );
+            } else {
+                // Calculator (basic example)
+                baseSteps.push(
+                    {
+                        title: "4️⃣ LLM Decides",
+                        component: "Ollama LLM",
+                        explanation: "Ollama analyzes the query and determines it needs the calculator tool. Returns JSON with tool name and arguments.",
+                        data: `LLM Response:\n{"tool": "calculator", "arguments": {"operation": "multiply", "a": 25, "b": 4}}`,
+                        code: `response = llm.invoke(messages)\ntool_call = extract_tool_call(response.content)`
+                    },
+                    {
+                        title: "5️⃣ Tool Execution",
+                        component: "MCP Server",
+                        explanation: "MCP server receives the tool call and executes the calculator. Performs 25 × 4 = 100 and returns the result.",
+                        data: `Tool: calculator\nOperation: multiply\nA: 25, B: 4\nResult: 100`,
+                        code: `result = a * b  # 25 * 4 = 100\nreturn [TextContent(text=f"Result: {result}")]`
+                    },
+                    {
+                        title: "6️⃣ Format Response",
+                        component: "Ollama LLM",
+                        explanation: "Tool result is sent back to LLM which formats a natural language response for the user.",
+                        data: `Tool result: 100\nLLM generates: "The result of 25 multiplied by 4 is 100."`,
+                        code: `messages.append({"role": "user", "content": f"Tool returned: {result}"})\nfinal = llm.invoke(messages)`
+                    },
+                    {
+                        title: "7️⃣ Final Answer",
+                        component: "User",
+                        explanation: "Natural language answer is displayed to the user.",
+                        data: `"The result of 25 multiplied by 4 is 100."`,
+                        code: `print(f"Final Answer: {response}")`
+                    }
+                );
+            }
+
+            return baseSteps;
         }
 
         let steps = getSteps(currentQuery);
@@ -579,6 +902,12 @@ print(f"Final Answer: {response_text}")
         function init() {
             renderStep();
             updateControls();
+            renderArchitecture();
+        }
+
+        // Render architecture diagram
+        function renderArchitecture() {
+            // This would be shown on step 2
         }
 
         // Render current step
@@ -586,10 +915,10 @@ print(f"Final Answer: {response_text}")
             const viz = document.getElementById('visualization');
             const step = steps[currentStep];
 
-            viz.innerHTML = `
+            let html = `
                 <div class="component active">
                     <h3>
-                        <span class="component-icon">${step.title.substring(0, 2)}</span>
+                        <span class="component-icon">${currentQuery.icon}</span>
                         ${step.title}
                     </h3>
 
@@ -608,17 +937,81 @@ print(f"Final Answer: {response_text}")
                         <pre>${highlightCode(step.code)}</pre>
                     </div>
                 </div>
-
-                ${currentStep < totalSteps - 1 ? '<div class="arrow visible">⬇️</div>' : ''}
             `;
 
+            // Add architecture diagram on step 2
+            if (currentStep === 1) {
+                html += `
+                    <div class="architecture-diagram">
+                        <h4>🏗️ System Architecture - 31+ Tools Across 10 Domains</h4>
+                        <div class="module-grid">
+                            <div class="module">
+                                <div class="module-icon">📚</div>
+                                <div class="module-name">RAG System</div>
+                                <div class="module-tools">4 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">🎨</div>
+                                <div class="module-name">Image Gen</div>
+                                <div class="module-tools">2 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">💻</div>
+                                <div class="module-name">Code Exec</div>
+                                <div class="module-tools">3 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">🌐</div>
+                                <div class="module-name">Web Tools</div>
+                                <div class="module-tools">4 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">📊</div>
+                                <div class="module-name">Data Analysis</div>
+                                <div class="module-tools">4 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">📁</div>
+                                <div class="module-name">File Ops</div>
+                                <div class="module-tools">4 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">🔀</div>
+                                <div class="module-name">Git Ops</div>
+                                <div class="module-tools">3 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">📄</div>
+                                <div class="module-name">Doc Process</div>
+                                <div class="module-tools">2 tools</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">🧠</div>
+                                <div class="module-name">Memory</div>
+                                <div class="module-tools">System</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-icon">🤖</div>
+                                <div class="module-name">Multi-Agent</div>
+                                <div class="module-tools">6 agents</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (currentStep < totalSteps - 1) {
+                html += '<div class="arrow visible">⬇️</div>';
+            }
+
+            viz.innerHTML = html;
             updateProgress();
         }
 
         // Highlight code
         function highlightCode(code) {
             return code
-                .replace(/(async|def|await|return|import|from|if|else)/g, '<span class="keyword">$1</span>')
+                .replace(/(async|def|await|return|import|from|if|else|class|for|in)/g, '<span class="keyword">$1</span>')
                 .replace(/(".*?")/g, '<span class="string">$1</span>')
                 .replace(/(#.*)/g, '<span class="comment">$1</span>')
                 .replace(/(\w+)\(/g, '<span class="function">$1</span>(');
@@ -671,6 +1064,7 @@ print(f"Final Answer: {response_text}")
                 // Load new query
                 const queryType = btn.dataset.query;
                 currentQuery = queries[queryType];
+                totalSteps = currentQuery.steps;
                 steps = getSteps(currentQuery);
                 currentStep = 0;
                 renderStep();
