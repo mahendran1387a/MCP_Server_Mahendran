@@ -1,262 +1,243 @@
 """
 RAG (Retrieval-Augmented Generation) System
-Combines vector store, document processing, and LLM for intelligent Q&A
+Handles document storage, embedding, and retrieval using ChromaDB
 """
-from typing import List, Dict, Any, Optional
-from pathlib import Path
-from vector_store import VectorStore
-from document_processor import DocumentProcessor
+import os
+import chromadb
+from chromadb.config import Settings
+from typing import List, Dict
+import hashlib
+from datetime import datetime
 
 
 class RAGSystem:
-    """Complete RAG system for document Q&A"""
+    """RAG system for document storage and retrieval"""
 
-    def __init__(self, store_path: str = "./data/rag_store"):
-        self.vector_store = VectorStore(store_path=store_path)
-        self.doc_processor = DocumentProcessor()
-        self.initialized = False
+    def __init__(self, persist_directory="./rag_db"):
+        """Initialize the RAG system with ChromaDB"""
+        self.persist_directory = persist_directory
 
-    async def initialize(self):
-        """Initialize the RAG system"""
-        print("Initializing RAG system...")
-        self.vector_store.initialize()
-        self.initialized = True
-        print("RAG system ready!")
+        # Create directory if it doesn't exist
+        os.makedirs(persist_directory, exist_ok=True)
 
-    async def index_document(self, file_path: str) -> Dict[str, Any]:
-        """
-        Index a single document into the RAG system
+        # Initialize ChromaDB client
+        self.client = chromadb.PersistentClient(path=persist_directory)
 
-        Args:
-            file_path: Path to document file
+        # Get or create collection
+        self.collection = self.client.get_or_create_collection(
+            name="documents",
+            metadata={"hnsw:space": "cosine"}
+        )
 
-        Returns:
-            Status dict with indexing results
-        """
-        if not self.initialized:
-            raise RuntimeError("RAG system not initialized")
+        print(f"✓ RAG system initialized with {self.collection.count()} documents")
 
-        path = Path(file_path)
-        if not path.exists():
-            return {'error': f'File not found: {file_path}', 'success': False}
+    def add_document(self, text: str, metadata: Dict = None) -> str:
+        """Add a document to the RAG database"""
+        if not text.strip():
+            raise ValueError("Document text cannot be empty")
 
-        # Process document based on type
-        ext = path.suffix.lower()
+        # Generate unique ID based on content hash
+        doc_id = hashlib.md5(text.encode()).hexdigest()
 
-        if ext == '.pdf':
-            doc_data = self.doc_processor.process_pdf(file_path)
-        elif ext == '.docx':
-            doc_data = self.doc_processor.process_docx(file_path)
-        else:
-            doc_data = self.doc_processor.process_text_file(file_path)
-
-        if 'error' in doc_data:
-            return {'error': doc_data['error'], 'success': False}
-
-        # Chunk the document
-        chunks = self.doc_processor.chunk_text(doc_data['text'], chunk_size=500, overlap=50)
-
-        if not chunks:
-            return {'error': 'No content extracted from document', 'success': False}
-
-        # Create metadata for each chunk
-        metadata_list = []
-        for i, chunk in enumerate(chunks):
-            meta = {
-                'source': file_path,
-                'file_name': path.name,
-                'chunk_index': i,
-                'total_chunks': len(chunks),
-                **doc_data.get('metadata', {})
-            }
-            metadata_list.append(meta)
-
-        # Add to vector store
-        self.vector_store.add_documents(chunks, metadata_list)
-
-        return {
-            'success': True,
-            'file': file_path,
-            'chunks_indexed': len(chunks),
-            'total_chars': len(doc_data['text']),
-            'metadata': doc_data.get('metadata', {})
+        # Prepare metadata
+        doc_metadata = {
+            "timestamp": datetime.now().isoformat(),
+            "length": len(text),
+            **(metadata or {})
         }
 
-    async def index_directory(self, directory: str, recursive: bool = True) -> Dict[str, Any]:
-        """
-        Index all documents in a directory
+        # Add to collection
+        self.collection.add(
+            documents=[text],
+            metadatas=[doc_metadata],
+            ids=[doc_id]
+        )
 
-        Args:
-            directory: Path to directory
-            recursive: Whether to search recursively
+        return doc_id
 
-        Returns:
-            Summary of indexing results
-        """
-        if not self.initialized:
-            raise RuntimeError("RAG system not initialized")
+    def add_documents_batch(self, documents: List[str], metadatas: List[Dict] = None) -> List[str]:
+        """Add multiple documents in batch"""
+        if not documents:
+            return []
 
-        results = {
-            'success': 0,
-            'failed': 0,
-            'total_chunks': 0,
-            'files': []
-        }
+        doc_ids = []
+        docs_to_add = []
+        metas_to_add = []
 
-        # Get all documents
-        path = Path(directory)
-        if not path.exists() or not path.is_dir():
-            return {'error': f'Directory not found: {directory}', 'success': False}
+        for i, text in enumerate(documents):
+            if not text.strip():
+                continue
 
-        # Process each file
-        extensions = self.doc_processor.supported_extensions
-        if recursive:
-            files = [f for f in path.rglob('*') if f.suffix.lower() in extensions]
-        else:
-            files = [f for f in path.glob('*') if f.suffix.lower() in extensions]
+            doc_id = hashlib.md5(text.encode()).hexdigest()
+            doc_ids.append(doc_id)
+            docs_to_add.append(text)
 
-        print(f"Found {len(files)} documents to index...")
-
-        for file_path in files:
-            result = await self.index_document(str(file_path))
-            if result.get('success'):
-                results['success'] += 1
-                results['total_chunks'] += result.get('chunks_indexed', 0)
-            else:
-                results['failed'] += 1
-
-            results['files'].append(result)
-
-        return results
-
-    async def query(self, question: str, k: int = 5) -> Dict[str, Any]:
-        """
-        Query the RAG system
-
-        Args:
-            question: User question
-            k: Number of relevant chunks to retrieve
-
-        Returns:
-            Dict with relevant contexts and metadata
-        """
-        if not self.initialized:
-            raise RuntimeError("RAG system not initialized")
-
-        # Search vector store
-        search_results = self.vector_store.search(question, k=k)
-
-        if not search_results:
-            return {
-                'question': question,
-                'contexts': [],
-                'answer': 'No relevant documents found in the knowledge base.',
-                'sources': []
-            }
-
-        # Format contexts
-        contexts = []
-        sources = set()
-
-        for result in search_results:
-            contexts.append({
-                'text': result['text'],
-                'score': result['score'],
-                'source': result['metadata'].get('file_name', 'Unknown'),
-                'chunk': result['metadata'].get('chunk_index', 0)
+            metadata = metadatas[i] if metadatas and i < len(metadatas) else {}
+            metadata.update({
+                "timestamp": datetime.now().isoformat(),
+                "length": len(text)
             })
-            sources.add(result['metadata'].get('file_name', 'Unknown'))
+            metas_to_add.append(metadata)
+
+        if docs_to_add:
+            self.collection.add(
+                documents=docs_to_add,
+                metadatas=metas_to_add,
+                ids=doc_ids
+            )
+
+        return doc_ids
+
+    def query(self, query_text: str, n_results: int = 3) -> Dict:
+        """Query the RAG database for relevant documents"""
+        if not query_text.strip():
+            return {
+                "documents": [],
+                "metadatas": [],
+                "distances": []
+            }
+
+        results = self.collection.query(
+            query_texts=[query_text],
+            n_results=n_results
+        )
 
         return {
-            'question': question,
-            'contexts': contexts,
-            'sources': list(sources),
-            'num_results': len(search_results)
+            "documents": results["documents"][0] if results["documents"] else [],
+            "metadatas": results["metadatas"][0] if results["metadatas"] else [],
+            "distances": results["distances"][0] if results["distances"] else []
         }
 
-    def get_stats(self) -> Dict[str, Any]:
-        """Get RAG system statistics"""
+    def get_all_documents(self) -> Dict:
+        """Get all documents in the database"""
+        results = self.collection.get()
         return {
-            'initialized': self.initialized,
-            **self.vector_store.get_stats()
+            "count": len(results["ids"]),
+            "documents": results["documents"],
+            "metadatas": results["metadatas"],
+            "ids": results["ids"]
         }
 
-    async def clear_index(self):
-        """Clear all indexed documents"""
-        if self.initialized:
-            self.vector_store.clear()
-            print("RAG index cleared")
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete a document by ID"""
+        try:
+            self.collection.delete(ids=[doc_id])
+            return True
+        except Exception as e:
+            print(f"Error deleting document: {e}")
+            return False
 
+    def clear_database(self) -> bool:
+        """Clear all documents from the database"""
+        try:
+            self.client.delete_collection(name="documents")
+            self.collection = self.client.get_or_create_collection(
+                name="documents",
+                metadata={"hnsw:space": "cosine"}
+            )
+            return True
+        except Exception as e:
+            print(f"Error clearing database: {e}")
+            return False
 
-class CodeRAG(RAGSystem):
-    """Specialized RAG system for code repositories"""
-
-    def __init__(self, store_path: str = "./data/code_rag_store"):
-        super().__init__(store_path)
-        # Add code-specific extensions
-        self.doc_processor.supported_extensions.update({
-            '.tsx', '.jsx', '.ts', '.vue', '.php', '.rb', '.swift',
-            '.kt', '.scala', '.sh', '.yml', '.yaml', '.json', '.xml'
-        })
-
-    async def analyze_repository(self, repo_path: str) -> Dict[str, Any]:
-        """
-        Analyze and index entire code repository
-
-        Args:
-            repo_path: Path to repository root
-
-        Returns:
-            Analysis results with statistics
-        """
-        # Index all code files
-        index_result = await self.index_directory(repo_path, recursive=True)
-
-        # Generate repository summary
-        path = Path(repo_path)
-        stats = {
-            'repository': path.name,
-            'path': str(path),
-            'files_indexed': index_result.get('success', 0),
-            'total_chunks': index_result.get('total_chunks', 0),
-            'failed_files': index_result.get('failed', 0)
+    def get_stats(self) -> Dict:
+        """Get database statistics"""
+        all_docs = self.collection.get()
+        return {
+            "total_documents": len(all_docs["ids"]),
+            "total_characters": sum(len(doc) for doc in all_docs["documents"]),
+            "collection_name": "documents"
         }
 
-        # Count by file type
-        file_types = {}
-        for file_result in index_result.get('files', []):
-            if file_result.get('success'):
-                file_name = file_result.get('file', '')
-                ext = Path(file_name).suffix
-                file_types[ext] = file_types.get(ext, 0) + 1
 
-        stats['file_types'] = file_types
+def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    """Split text into overlapping chunks"""
+    if not text:
+        return []
 
-        return stats
+    chunks = []
+    start = 0
+    text_length = len(text)
 
-    async def find_function(self, function_name: str) -> Dict[str, Any]:
-        """
-        Find function definition in indexed code
+    while start < text_length:
+        end = start + chunk_size
+        chunk = text[start:end]
 
-        Args:
-            function_name: Name of function to find
+        # Try to break at sentence boundary
+        if end < text_length:
+            last_period = chunk.rfind('.')
+            last_newline = chunk.rfind('\n')
+            break_point = max(last_period, last_newline)
 
-        Returns:
-            Function location and code
-        """
-        query = f"function {function_name} definition implementation"
-        results = await self.query(query, k=3)
-        return results
+            if break_point > chunk_size // 2:  # Only break if it's not too early
+                chunk = text[start:start + break_point + 1]
+                end = start + break_point + 1
 
-    async def find_similar_code(self, code_snippet: str, k: int = 5) -> Dict[str, Any]:
-        """
-        Find similar code patterns
+        chunks.append(chunk.strip())
+        start = end - overlap
 
-        Args:
-            code_snippet: Code to find similar patterns for
-            k: Number of results
+    return [c for c in chunks if c]
 
-        Returns:
-            Similar code chunks
-        """
-        return await self.query(code_snippet, k=k)
+
+def process_uploaded_file(file_path: str, filename: str) -> List[str]:
+    """Process uploaded file and return chunks"""
+    _, ext = os.path.splitext(filename.lower())
+
+    try:
+        if ext == '.txt':
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+        elif ext == '.pdf':
+            # PDF processing
+            try:
+                import PyPDF2
+                text = ""
+                with open(file_path, 'rb') as f:
+                    pdf_reader = PyPDF2.PdfReader(f)
+                    for page in pdf_reader.pages:
+                        text += page.extract_text() + "\n"
+            except ImportError:
+                raise Exception("PyPDF2 not installed. Install with: pip install PyPDF2")
+
+        elif ext in ['.doc', '.docx']:
+            # Word document processing
+            try:
+                import docx
+                doc = docx.Document(file_path)
+                text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+            except ImportError:
+                raise Exception("python-docx not installed. Install with: pip install python-docx")
+
+        elif ext == '.json':
+            import json
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                text = json.dumps(data, indent=2)
+
+        elif ext == '.md':
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+        else:
+            # Try to read as plain text
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+        # Split into chunks
+        chunks = chunk_text(text, chunk_size=1000, overlap=200)
+        return chunks
+
+    except Exception as e:
+        raise Exception(f"Error processing file: {str(e)}")
+
+
+# Global RAG instance
+_rag_instance = None
+
+def get_rag_system():
+    """Get or create global RAG system instance"""
+    global _rag_instance
+    if _rag_instance is None:
+        _rag_instance = RAGSystem()
+    return _rag_instance

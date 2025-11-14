@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced MCP Framework - Interactive Visualization</title>
+    <title>LangChain + Ollama + MCP - Complete Visualization</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -30,251 +30,136 @@
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 3em;
+            font-size: 2.5em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .header p {
-            font-size: 1.3em;
-            opacity: 0.95;
-            margin-bottom: 5px;
+            font-size: 1.2em;
+            opacity: 0.9;
         }
 
-        .header .stats {
+        /* Tab Navigation */
+        .tab-navigation {
             display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-top: 20px;
+            background: #f8f9fa;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
             font-size: 1.1em;
-        }
-
-        .stat-item {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px 20px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-
-        .stat-number {
-            font-size: 1.8em;
             font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+            position: relative;
         }
 
-        .main-content {
+        .tab-button:hover {
+            background: #e8f4f8;
+            color: #667eea;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            background: white;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #667eea;
+        }
+
+        .tab-icon {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Interactive Flow Styles */
+        .interactive-flow {
             display: grid;
-            grid-template-columns: 350px 1fr;
+            grid-template-columns: 300px 1fr;
             gap: 0;
-            min-height: 700px;
+            min-height: 600px;
         }
 
         .controls {
             background: #f8f9fa;
             padding: 30px;
-            border-right: 3px solid #e0e0e0;
-            overflow-y: auto;
-            max-height: 800px;
-        }
-
-        .domain-section {
-            margin-bottom: 30px;
-        }
-
-        .domain-section h3 {
-            margin-bottom: 15px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .domain-buttons {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
-        }
-
-        .domain-btn {
-            padding: 15px;
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: left;
-            font-size: 0.95em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .domain-btn .icon {
-            font-size: 1.5em;
-            min-width: 30px;
-        }
-
-        .domain-btn .info {
-            flex: 1;
-        }
-
-        .domain-btn .title {
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .domain-btn .count {
-            font-size: 0.85em;
-            color: #666;
-        }
-
-        .domain-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: translateX(5px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .domain-btn:hover .count {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .domain-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .domain-btn.active .count {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .step-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .control-btn {
-            padding: 15px 20px;
-            font-size: 1.1em;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-
-        .control-btn.next {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-        }
-
-        .control-btn.prev {
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-            color: white;
-        }
-
-        .control-btn.reset {
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-            color: white;
-        }
-
-        .control-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .control-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .step-counter {
-            text-align: center;
-            font-size: 1.2em;
-            color: #667eea;
-            font-weight: bold;
-            margin: 15px 0;
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            border: 2px solid #667eea;
-        }
-
-        .progress-bar {
-            background: #e0e0e0;
-            height: 10px;
-            border-radius: 5px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-
-        .progress-fill {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            height: 100%;
-            transition: width 0.5s;
+            border-right: 2px solid #e0e0e0;
         }
 
         .visualization {
             padding: 40px;
-            position: relative;
-            overflow-y: auto;
-            max-height: 800px;
         }
 
         .component {
             background: white;
             border: 3px solid #e0e0e0;
             border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 25px;
+            padding: 25px;
+            margin-bottom: 20px;
             transition: all 0.5s;
-            position: relative;
         }
 
         .component.active {
             border-color: #667eea;
-            background: linear-gradient(135deg, #f0f4ff 0%, #fce4ff 100%);
+            background: #f0f4ff;
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             transform: scale(1.02);
         }
 
         .component h3 {
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            font-size: 1.5em;
+            gap: 10px;
         }
 
         .component-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 30px;
+            height: 30px;
+            background: #667eea;
             color: white;
-            border-radius: 12px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 1.3em;
         }
 
         .data-box {
             background: #f8f9fa;
-            border-left: 5px solid #667eea;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
             font-family: 'Courier New', monospace;
-            font-size: 0.95em;
+            font-size: 0.9em;
             opacity: 0;
             transition: opacity 0.5s;
         }
@@ -283,38 +168,12 @@
             opacity: 1;
         }
 
-        .data-box .label {
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .arrow {
-            text-align: center;
-            font-size: 2.5em;
-            color: #667eea;
-            margin: -10px 0;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-
-        .arrow.visible {
-            opacity: 1;
-            animation: bounce 1.5s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-
         .explanation {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
-            border-left: 5px solid #ffc107;
-            padding: 25px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
             margin: 20px 0;
-            border-radius: 8px;
+            border-radius: 5px;
             opacity: 0;
             transition: opacity 0.5s;
         }
@@ -325,153 +184,385 @@
 
         .explanation h4 {
             color: #856404;
-            margin-bottom: 15px;
-            font-size: 1.2em;
+            margin-bottom: 10px;
         }
 
         .explanation p {
             color: #856404;
-            line-height: 1.8;
-            font-size: 1.05em;
+            line-height: 1.6;
         }
 
         .code-snippet {
             background: #1e1e1e;
             color: #d4d4d4;
-            padding: 25px;
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 8px;
             font-family: 'Courier New', monospace;
-            font-size: 0.95em;
-            margin: 20px 0;
+            font-size: 0.9em;
+            margin: 15px 0;
             overflow-x: auto;
             opacity: 0;
             transition: opacity 0.5s;
-            border: 2px solid #667eea;
         }
 
         .code-snippet.visible {
             opacity: 1;
         }
 
-        .code-snippet .keyword {
-            color: #569cd6;
+        .code-snippet .keyword { color: #569cd6; }
+        .code-snippet .string { color: #ce9178; }
+        .code-snippet .function { color: #dcdcaa; }
+        .code-snippet .comment { color: #6a9955; }
+
+        .arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            margin: -10px 0;
+            opacity: 0;
+            transition: opacity 0.5s;
         }
 
-        .code-snippet .string {
-            color: #ce9178;
+        .arrow.visible {
+            opacity: 1;
+            animation: bounce 1s infinite;
         }
 
-        .code-snippet .function {
-            color: #dcdcaa;
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
-        .code-snippet .comment {
-            color: #6a9955;
-        }
-
-        .tools-grid {
+        /* Flowchart Styles */
+        .flowchart-layout {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 0;
+            min-height: 700px;
         }
 
-        .tool-card {
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            padding: 15px;
+        .controls-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .flowchart-panel {
+            background: #fafbfc;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .messages-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-left: 2px solid #e0e0e0;
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        #flowchart {
+            width: 100%;
+            height: 100%;
+            min-height: 700px;
+        }
+
+        .node {
+            cursor: pointer;
             transition: all 0.3s;
         }
 
-        .tool-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        .node-rect {
+            fill: white;
+            stroke: #666;
+            stroke-width: 2;
+            rx: 10;
         }
 
-        .tool-card .tool-name {
+        .node.active .node-rect {
+            fill: #667eea;
+            stroke: #4c5fd5;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8));
+        }
+
+        .node.active .node-text {
+            fill: white;
+            font-weight: bold;
+        }
+
+        .node-text {
+            fill: #333;
+            font-size: 14px;
+            font-weight: 500;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .edge {
+            stroke: #999;
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.3;
+        }
+
+        .edge.active {
+            stroke: #4CAF50;
+            stroke-width: 3;
+            opacity: 1;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+
+        .data-packet {
+            r: 8;
+            fill: #ff5722;
+            filter: drop-shadow(0 0 10px rgba(255, 87, 34, 0.8));
+            opacity: 0;
+        }
+
+        .data-packet.active {
+            opacity: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .node.pulsing {
+            animation: pulse 1s infinite;
+        }
+
+        /* Shared Controls */
+        .query-section {
+            margin-bottom: 30px;
+        }
+
+        .query-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .query-buttons, .query-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .query-btn, .query-option {
+            padding: 12px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .query-btn:hover, .query-option:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .query-btn.active, .query-option.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .step-controls, .playback-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn.next, .control-btn.play { background: #4CAF50; color: white; }
+        .control-btn.prev { background: #2196F3; color: white; }
+        .control-btn.reset { background: #f44336; color: white; }
+        .control-btn.pause { background: #ff9800; color: white; }
+
+        .control-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .step-counter, .step-info {
+            text-align: center;
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .step-info .current {
+            font-size: 2em;
             font-weight: bold;
             color: #667eea;
-            margin-bottom: 5px;
         }
 
-        .tool-card .tool-desc {
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .speed-control {
+            margin-top: 10px;
+        }
+
+        .speed-control label {
+            display: block;
+            margin-bottom: 8px;
             font-size: 0.9em;
             color: #666;
         }
 
-        .architecture {
-            background: linear-gradient(135deg, #e8f4f8 0%, #f0e8ff 100%);
-            padding: 30px;
-            border-radius: 15px;
-            margin: 20px 0;
-            border: 3px solid #667eea;
+        .speed-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
         }
 
-        .architecture h4 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.3em;
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
         }
 
-        .arch-layer {
+        .message-log {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
             background: white;
-            padding: 20px;
-            margin: 15px 0;
-            border-radius: 10px;
-            border-left: 5px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+            opacity: 0.3;
             transition: all 0.3s;
         }
 
-        .arch-layer:hover {
-            transform: translateX(10px);
+        .message.active {
+            opacity: 1;
+            border-left-color: #667eea;
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
         }
 
-        .arch-layer .layer-title {
+        .message .timestamp {
+            font-size: 0.8em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .message .from-to {
             font-weight: bold;
             color: #667eea;
-            font-size: 1.1em;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
-        .arch-layer .layer-desc {
-            color: #666;
-            line-height: 1.6;
-        }
-
-        @media (max-width: 1200px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-
-            .controls {
-                border-right: none;
-                border-bottom: 3px solid #e0e0e0;
-                max-height: none;
-            }
-
-            .visualization {
-                max-height: none;
-            }
+        .message .content {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .legend {
-            background: linear-gradient(135deg, #e8f4f8 0%, #f0e8ff 100%);
-            padding: 20px;
+            background: #e8f4f8;
+            padding: 15px;
             border-radius: 10px;
             margin-top: 20px;
-            border: 2px solid #667eea;
+            font-size: 0.85em;
         }
 
         .legend h4 {
             margin-bottom: 15px;
-            color: #667eea;
+            color: #333;
         }
 
         .legend-items {
-            display: grid;
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-direction: column;
             gap: 10px;
         }
 
@@ -479,882 +570,209 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            background: white;
-            padding: 8px;
-            border-radius: 5px;
         }
 
         .legend-color {
-            width: 25px;
-            height: 25px;
-            border-radius: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
         }
 
-        .badge {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            margin-left: 10px;
-        }
+        @media (max-width: 1200px) {
+            .interactive-flow, .flowchart-layout {
+                grid-template-columns: 1fr;
+            }
 
-        .badge.new {
-            background: #4CAF50;
-        }
-
-        .badge.advanced {
-            background: #ff9800;
+            .controls, .controls-panel, .messages-panel {
+                border: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 Advanced MCP Framework</h1>
-            <p>LangChain + Ollama + 31+ Tools Across 10 Domains</p>
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-number">31+</div>
-                    <div>Tools</div>
+            <h1>🚀 LangChain + Ollama + MCP</h1>
+            <p>Complete Interactive Visualization Suite</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="step-by-step">
+                <span class="tab-icon">📋</span>
+                Step-by-Step Flow
+            </button>
+            <button class="tab-button" data-tab="animated">
+                <span class="tab-icon">🎬</span>
+                Animated Flowchart
+            </button>
+        </div>
+
+        <!-- Tab 1: Step-by-Step Flow -->
+        <div class="tab-content active" id="step-by-step">
+            <div class="interactive-flow">
+                <div class="controls">
+                    <div class="query-section">
+                        <h3>📝 Select a Query</h3>
+                        <div class="query-buttons">
+                            <button class="query-btn active" data-query="calculator">
+                                "What is 25 × 4?"
+                            </button>
+                            <button class="query-btn" data-query="weather">
+                                "Weather in Paris?"
+                            </button>
+                            <button class="query-btn" data-query="combined">
+                                "50 + 30 and weather in Tokyo"
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill1"></div>
+                    </div>
+
+                    <div class="step-counter">
+                        <div>Step <span id="currentStep1">1</span> of <span id="totalSteps1">9</span></div>
+                    </div>
+
+                    <div class="step-controls">
+                        <button class="control-btn next" id="nextBtn1">Next Step ▶</button>
+                        <button class="control-btn prev" id="prevBtn1">◀ Previous</button>
+                        <button class="control-btn reset" id="resetBtn1">🔄 Reset</button>
+                    </div>
+
+                    <div class="legend">
+                        <h4>Legend</h4>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #667eea;"></div>
+                                <span>Active Component</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #4CAF50;"></div>
+                                <span>Data Flow</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ffc107;"></div>
+                                <span>Explanation</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-number">10</div>
-                    <div>Domains</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">100%</div>
-                    <div>Local</div>
-                </div>
+
+                <div class="visualization" id="visualization1"></div>
             </div>
         </div>
 
-        <div class="main-content">
-            <!-- Controls Sidebar -->
-            <div class="controls">
-                <div class="domain-section">
-                    <h3>🎯 Select Domain</h3>
-                    <div class="domain-buttons">
-                        <button class="domain-btn active" data-domain="overview">
-                            <span class="icon">🏗️</span>
-                            <div class="info">
-                                <div class="title">Architecture Overview</div>
-                                <div class="count">Complete System Flow</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="basic">
-                            <span class="icon">🔢</span>
-                            <div class="info">
-                                <div class="title">Basic Tools</div>
-                                <div class="count">2 tools: Calculator, Weather</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="rag">
-                            <span class="icon">📚</span>
-                            <div class="info">
-                                <div class="title">RAG System <span class="badge new">NEW</span></div>
-                                <div class="count">4 tools: Document Q&A</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="code-rag">
-                            <span class="icon">💻</span>
-                            <div class="info">
-                                <div class="title">Code Intelligence <span class="badge new">NEW</span></div>
-                                <div class="count">3 tools: Repository Analysis</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="image">
-                            <span class="icon">🎨</span>
-                            <div class="info">
-                                <div class="title">Image Generation <span class="badge new">NEW</span></div>
-                                <div class="count">2 tools: Stable Diffusion</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="code-exec">
-                            <span class="icon">⚡</span>
-                            <div class="info">
-                                <div class="title">Code Execution <span class="badge new">NEW</span></div>
-                                <div class="count">3 tools: Safe Sandbox</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="web">
-                            <span class="icon">🌐</span>
-                            <div class="info">
-                                <div class="title">Web Tools <span class="badge new">NEW</span></div>
-                                <div class="count">4 tools: Scraping & Extract</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="data">
-                            <span class="icon">📊</span>
-                            <div class="info">
-                                <div class="title">Data Analysis <span class="badge new">NEW</span></div>
-                                <div class="count">4 tools: Pandas & Viz</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="files">
-                            <span class="icon">📁</span>
-                            <div class="info">
-                                <div class="title">File Operations <span class="badge new">NEW</span></div>
-                                <div class="count">4 tools: File Management</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="git">
-                            <span class="icon">🔀</span>
-                            <div class="info">
-                                <div class="title">Git Integration <span class="badge new">NEW</span></div>
-                                <div class="count">3 tools: Version Control</div>
-                            </div>
-                        </button>
-                        <button class="domain-btn" data-domain="agents">
-                            <span class="icon">🤖</span>
-                            <div class="info">
-                                <div class="title">Multi-Agent System <span class="badge advanced">ADVANCED</span></div>
-                                <div class="count">6 specialized agents</div>
-                            </div>
-                        </button>
+        <!-- Tab 2: Animated Flowchart -->
+        <div class="tab-content" id="animated">
+            <div class="flowchart-layout">
+                <div class="controls-panel">
+                    <div class="control-section">
+                        <h3>🎮 Mode</h3>
+                        <div class="mode-toggle">
+                            <button class="mode-btn" id="liveMode">Live</button>
+                            <button class="mode-btn active" id="replayMode">Replay</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
+                    <div class="control-section">
+                        <h3>❓ Query</h3>
+                        <div class="query-selector">
+                            <div class="query-option selected" data-query="calculator">
+                                "What is 25 × 4?"
+                            </div>
+                            <div class="query-option" data-query="weather">
+                                "Weather in Paris?"
+                            </div>
+                            <div class="query-option" data-query="combined">
+                                "50 + 30 & weather?"
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="step-counter">
-                    <div>Step <span id="currentStep">1</span> of <span id="totalSteps">5</span></div>
-                </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill2"></div>
+                    </div>
 
-                <div class="step-controls">
-                    <button class="control-btn next" id="nextBtn">Next Step ▶</button>
-                    <button class="control-btn prev" id="prevBtn">◀ Previous</button>
-                    <button class="control-btn reset" id="resetBtn">🔄 Reset</button>
-                </div>
+                    <div class="step-info">
+                        <div class="current" id="currentStep2">1</div>
+                        <div class="total">of <span id="totalSteps2">12</span> steps</div>
+                    </div>
 
-                <div class="legend">
-                    <h4>Legend</h4>
-                    <div class="legend-items">
+                    <div class="control-section">
+                        <h3>▶️ Playback</h3>
+                        <div class="playback-controls">
+                            <button class="control-btn play" id="playBtn">▶ Play</button>
+                            <button class="control-btn pause" id="pauseBtn" style="display:none;">⏸ Pause</button>
+                            <button class="control-btn next" id="nextBtn2">Next ▶</button>
+                            <button class="control-btn prev" id="prevBtn2">◀ Previous</button>
+                            <button class="control-btn reset" id="resetBtn2">🔄 Reset</button>
+                        </div>
+
+                        <div class="speed-control">
+                            <label>Speed: <span id="speedValue">1.0</span>x</label>
+                            <input type="range" class="speed-slider" id="speedSlider"
+                                   min="0.5" max="3" step="0.5" value="1">
+                        </div>
+                    </div>
+
+                    <div class="legend">
                         <div class="legend-item">
-                            <div class="legend-color" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div>
-                            <span>Active Component</span>
+                            <div class="legend-color" style="background: #667eea;"></div>
+                            <span>Active Node</span>
                         </div>
                         <div class="legend-item">
                             <div class="legend-color" style="background: #4CAF50;"></div>
-                            <span>New Feature</span>
+                            <span>Data Flow</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #ffc107;"></div>
-                            <span>Explanation</span>
+                            <div class="legend-color" style="background: #ff5722;"></div>
+                            <span>Data Packet</span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Visualization Area -->
-            <div class="visualization" id="visualization">
-                <!-- Content will be dynamically generated here -->
+                <div class="flowchart-panel">
+                    <svg id="flowchart"></svg>
+                </div>
+
+                <div class="messages-panel">
+                    <h3>📨 Message Flow</h3>
+                    <div class="message-log" id="messageLog"></div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="tab1-step-by-step.js"></script>
+    <script src="tab2-animated.js"></script>
     <script>
-        // Domain configurations
-        const domains = {
-            overview: {
-                name: "Architecture Overview",
-                steps: [
-                    {
-                        title: "🏗️ System Architecture",
-                        explanation: "The Advanced MCP Framework is a comprehensive local AI development platform. It combines LangChain for orchestration, Ollama for local LLM inference, and a powerful MCP (Model Context Protocol) server with 31+ tools across 10 specialized domains.",
-                        architecture: true,
-                        layers: [
-                            { title: "User Interface Layer", desc: "Interactive CLI with demo mode and real-time feedback" },
-                            { title: "LangChain Orchestrator", desc: "Coordinates LLM calls, tool selection, and response generation" },
-                            { title: "Ollama LLM", desc: "Local language model (llama3.2) for privacy and control" },
-                            { title: "MCP Server", desc: "31+ tools organized into 10 specialized domains" },
-                            { title: "Specialized Modules", desc: "RAG, Image Gen, Code Execution, Web Tools, Data Analysis, etc." }
-                        ]
-                    },
-                    {
-                        title: "🎯 Tool Domains (10 Categories)",
-                        explanation: "The framework is organized into 10 specialized domains, each providing unique capabilities. This modular architecture allows easy extension and maintenance.",
-                        tools: [
-                            { name: "Basic Tools", desc: "Calculator & Weather (original 2 tools)", icon: "🔢" },
-                            { name: "RAG System", desc: "Document indexing & semantic search (4 tools)", icon: "📚" },
-                            { name: "Code Intelligence", desc: "Repository analysis & code search (3 tools)", icon: "💻" },
-                            { name: "Image Generation", desc: "Stable Diffusion text-to-image (2 tools)", icon: "🎨" },
-                            { name: "Code Execution", desc: "Safe Python sandbox (3 tools)", icon: "⚡" },
-                            { name: "Web Tools", desc: "Scraping & content extraction (4 tools)", icon: "🌐" },
-                            { name: "Data Analysis", desc: "Pandas & visualizations (4 tools)", icon: "📊" },
-                            { name: "File Operations", desc: "File management & search (4 tools)", icon: "📁" },
-                            { name: "Git Integration", desc: "Version control operations (3 tools)", icon: "🔀" },
-                            { name: "Multi-Agent", desc: "6 specialized agents (advanced)", icon: "🤖" }
-                        ]
-                    },
-                    {
-                        title: "🚀 Key Advantages",
-                        explanation: "This framework provides significant advantages over cloud-based solutions and basic demos.",
-                        features: [
-                            { title: "100% Local", desc: "No cloud dependencies, complete privacy, zero API costs" },
-                            { title: "Comprehensive", desc: "31+ tools covering most AI/ML use cases" },
-                            { title: "Modular", desc: "Easy to extend with custom tools and agents" },
-                            { title: "Production Ready", desc: "Error handling, async operations, persistent storage" },
-                            { title: "GPU Accelerated", desc: "CUDA, Apple Silicon, CPU fallback support" },
-                            { title: "Memory System", desc: "Conversation history and semantic memory" }
-                        ]
-                    },
-                    {
-                        title: "💡 Use Cases",
-                        explanation: "The framework unlocks numerous real-world applications across different domains.",
-                        useCases: [
-                            { title: "Research Assistant", desc: "Index papers, RAG Q&A, summarization, memory" },
-                            { title: "Code Assistant", desc: "Repository analysis, function search, safe execution, Git ops" },
-                            { title: "Data Analyst", desc: "CSV/Excel loading, statistics, visualizations, pandas queries" },
-                            { title: "Content Creator", desc: "Image generation, document processing, multi-agent workflows" },
-                            { title: "Web Researcher", desc: "Website scraping, text extraction, file downloads" },
-                            { title: "Developer Tools", desc: "File management, code formatting, project analysis" }
-                        ]
-                    },
-                    {
-                        title: "📈 Growth Metrics",
-                        explanation: "The framework has grown from a simple 2-tool demo to a comprehensive platform.",
-                        metrics: [
-                            { label: "Tools", before: "2", after: "31+", growth: "+1450%" },
-                            { label: "Domains", before: "1", after: "10", growth: "+900%" },
-                            { label: "Lines of Code", before: "~400", after: "~3500+", growth: "+775%" },
-                            { label: "Dependencies", before: "5", after: "40+", growth: "+700%" },
-                            { label: "AI Models", before: "1", after: "5+", growth: "+400%" },
-                            { label: "Capabilities", before: "Basic", after: "Production", growth: "Enterprise" }
-                        ]
-                    }
-                ]
-            },
-            basic: {
-                name: "Basic Tools",
-                example: "What is 25 × 4?",
-                steps: [
-                    {
-                        title: "1️⃣ User Query",
-                        explanation: "User asks a mathematical question that requires the calculator tool.",
-                        data: 'User: "What is 25 × 4?"',
-                        code: 'query = input("💬 You: ")  # "What is 25 × 4?"'
-                    },
-                    {
-                        title: "2️⃣ LangChain Processing",
-                        explanation: "LangChain receives the query and determines that the calculator tool is needed.",
-                        data: 'Analyzing query...\nTool needed: calculator\nOperation: multiply',
-                        code: 'messages = [\n  {"role": "system", "content": system_prompt},\n  {"role": "user", "content": "What is 25 × 4?"}\n]\nresponse = llm.invoke(messages)'
-                    },
-                    {
-                        title: "3️⃣ Tool Selection",
-                        explanation: "The LLM identifies that it needs to use the calculator tool with multiply operation.",
-                        data: '{"tool": "calculator", "arguments": {"operation": "multiply", "a": 25, "b": 4}}',
-                        code: 'tool_call = extract_tool_call(response)\n# {"tool": "calculator", "arguments": {...}}'
-                    },
-                    {
-                        title: "4️⃣ MCP Server Execution",
-                        explanation: "The MCP server receives the tool call and executes the calculator operation.",
-                        data: 'Executing calculator...\nOperation: multiply\n25 × 4 = 100',
-                        code: 'async def calculator_tool(args):\n    a, b = args["a"], args["b"]\n    result = a * b  # 25 * 4 = 100\n    return result'
-                    },
-                    {
-                        title: "5️⃣ Final Response",
-                        explanation: "The result is formatted into a natural language response and returned to the user.",
-                        data: 'Tool Result: 100\nFormatted Response: "The result of 25 multiplied by 4 is 100."',
-                        code: 'final_response = llm.format_response(tool_result)\nprint(f"🤖 Assistant: {final_response}")'
-                    }
-                ]
-            },
-            rag: {
-                name: "RAG System",
-                example: "Index ./research.pdf and answer questions about it",
-                steps: [
-                    {
-                        title: "1️⃣ Document Indexing",
-                        explanation: "User requests to index a PDF document. The system reads the PDF, extracts text, and prepares it for embedding.",
-                        data: 'Command: "Index ./research.pdf"\nExtracting text from PDF...\nFound 50 pages, 25,000 words',
-                        code: 'from document_processor import DocumentProcessor\n\nprocessor = DocumentProcessor()\ntext = await processor.extract_text("./research.pdf")\nchunks = processor.chunk_for_rag(text)'
-                    },
-                    {
-                        title: "2️⃣ Text Chunking",
-                        explanation: "The document text is split into chunks (typically 500-1000 tokens) with overlap for better context preservation.",
-                        data: 'Creating chunks...\nChunk size: 500 tokens\nOverlap: 100 tokens\nTotal chunks: 120',
-                        code: 'chunks = text_splitter.split_text(\n    text,\n    chunk_size=500,\n    chunk_overlap=100\n)\n# 120 chunks created'
-                    },
-                    {
-                        title: "3️⃣ Embedding Generation",
-                        explanation: "Each chunk is converted into a vector embedding using a local sentence transformer model (all-MiniLM-L6-v2). This allows semantic similarity search.",
-                        data: 'Generating embeddings...\nModel: all-MiniLM-L6-v2\nEmbedding dimension: 384\nProcessing 120 chunks...',
-                        code: 'from sentence_transformers import SentenceTransformer\n\nmodel = SentenceTransformer("all-MiniLM-L6-v2")\nembeddings = model.encode(chunks)\n# Shape: (120, 384)'
-                    },
-                    {
-                        title: "4️⃣ FAISS Indexing",
-                        explanation: "The embeddings are stored in a FAISS index for fast similarity search. The index is persisted to disk for future use.",
-                        data: 'Creating FAISS index...\nIndex type: IndexFlatL2\nVectors added: 120\nSaved to: ./data/vector_store/',
-                        code: 'import faiss\n\nindex = faiss.IndexFlatL2(384)\nindex.add(embeddings)\nfaiss.write_index(index, "vector_store.index")'
-                    },
-                    {
-                        title: "5️⃣ Semantic Query",
-                        explanation: 'User asks a question about the indexed document. The question is embedded and similar chunks are retrieved.',
-                        data: 'Query: "What are the main findings?"\nSearching for similar chunks...\nTop 5 matches retrieved',
-                        code: 'query_embedding = model.encode([query])\nscores, indices = index.search(query_embedding, k=5)\nrelevant_chunks = [chunks[i] for i in indices[0]]'
-                    },
-                    {
-                        title: "6️⃣ Context-Aware Response",
-                        explanation: "The retrieved chunks are passed to the LLM as context, which then generates an answer based on the document content.",
-                        data: 'Context: [5 relevant chunks]\nGenerating answer with LLM...\nResponse: "The main findings include..."',
-                        code: 'context = "\\n".join(relevant_chunks)\nprompt = f"Context: {context}\\n\\nQuestion: {query}"\nresponse = llm.invoke(prompt)\nprint(response)'
-                    }
-                ]
-            },
-            "code-rag": {
-                name: "Code Intelligence",
-                example: "Analyze repository at ./my_project",
-                steps: [
-                    {
-                        title: "1️⃣ Repository Scanning",
-                        explanation: "The system recursively scans the repository for code files (.py, .js, .java, .cpp, etc.) and lists all files to be analyzed.",
-                        data: 'Scanning: ./my_project\nFound files:\n- 45 Python files\n- 23 JavaScript files\n- 12 Config files',
-                        code: 'import os\nimport glob\n\ncode_files = glob.glob("**/*.py", recursive=True)\ncode_files += glob.glob("**/*.js", recursive=True)\n# Total: 68 code files'
-                    },
-                    {
-                        title: "2️⃣ Code Extraction",
-                        explanation: "Each code file is read and analyzed to extract functions, classes, and important code blocks with their metadata (file path, line numbers).",
-                        data: 'Extracting code structures...\nFunctions found: 234\nClasses found: 67\nImports analyzed: 156',
-                        code: 'import ast\n\nfor file in code_files:\n    tree = ast.parse(open(file).read())\n    functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]\n    classes = [n for n in tree.body if isinstance(n, ast.ClassDef)]'
-                    },
-                    {
-                        title: "3️⃣ Code Embedding",
-                        explanation: "Code blocks are embedded using the same embedding model. This allows semantic code search (e.g., find functions that handle authentication).",
-                        data: 'Creating code embeddings...\nModel: all-MiniLM-L6-v2\nCode blocks: 301\nEmbeddings generated: 301',
-                        code: 'code_snippets = []\nfor func in functions:\n    snippet = f"{func.name}: {ast.unparse(func)}"\n    code_snippets.append(snippet)\n\nembeddings = model.encode(code_snippets)'
-                    },
-                    {
-                        title: "4️⃣ Code Index Creation",
-                        explanation: "A separate FAISS index is created specifically for code, stored in ./data/code_rag_store/ with metadata mapping.",
-                        data: 'Creating code index...\nIndex: code_rag_store\nVectors: 301\nMetadata: {file, function, line_no}',
-                        code: 'code_index = faiss.IndexFlatL2(384)\ncode_index.add(embeddings)\nfaiss.write_index(code_index, "code_rag.index")\nsave_metadata(code_metadata, "code_meta.json")'
-                    },
-                    {
-                        title: "5️⃣ Semantic Code Search",
-                        explanation: 'User can now search for code semantically (e.g., "find authentication functions"). The system finds similar code based on meaning, not just text matching.',
-                        data: 'Query: "find authentication functions"\nSearching code index...\nMatches:\n- auth.py:45 login_user()\n- auth.py:78 verify_token()',
-                        code: 'query = "find authentication functions"\nquery_emb = model.encode([query])\nscores, indices = code_index.search(query_emb, k=5)\n\nfor idx in indices[0]:\n    print(code_metadata[idx])'
-                    },
-                    {
-                        title: "6️⃣ Code-Aware Responses",
-                        explanation: "The LLM can now answer questions about the codebase with actual code context, provide refactoring suggestions, or explain implementation patterns.",
-                        data: 'LLM Response with code context:\n"Your authentication is implemented in auth.py using JWT tokens. The login_user() function..."',
-                        code: 'context = get_relevant_code(query)\nprompt = f"Code context:\\n{context}\\n\\nQuestion: {query}"\nresponse = llm.invoke(prompt)\nprint(response)'
-                    }
-                ]
-            },
-            image: {
-                name: "Image Generation",
-                example: "Generate an image of a cyberpunk city at sunset",
-                steps: [
-                    {
-                        title: "1️⃣ User Prompt",
-                        explanation: "User provides a text description of the desired image. The prompt can include style, subject, mood, and technical details.",
-                        data: 'Prompt: "A cyberpunk city at sunset with neon lights, highly detailed, 8k"\nStyle: Cyberpunk\nMood: Atmospheric',
-                        code: 'prompt = "A cyberpunk city at sunset with neon lights, highly detailed, 8k"\nargs = {\n    "prompt": prompt,\n    "width": 768,\n    "height": 512,\n    "steps": 30\n}'
-                    },
-                    {
-                        title: "2️⃣ Model Loading",
-                        explanation: "Stable Diffusion 2.1 model is loaded. First run downloads ~4GB model. Subsequent runs load from cache. GPU acceleration is used if available (CUDA/MPS).",
-                        data: 'Loading Stable Diffusion 2.1...\nModel size: 4.2 GB\nDevice: CUDA (GPU)\nLoaded in 3.2 seconds',
-                        code: 'from diffusers import StableDiffusionPipeline\nimport torch\n\npipe = StableDiffusionPipeline.from_pretrained(\n    "stabilityai/stable-diffusion-2-1",\n    torch_dtype=torch.float16\n)\npipe = pipe.to("cuda")'
-                    },
-                    {
-                        title: "3️⃣ Text Encoding",
-                        explanation: "The text prompt is encoded into embeddings using CLIP text encoder. This converts words into vectors that guide image generation.",
-                        data: 'Encoding text prompt...\nTokens: 18\nEmbedding shape: (77, 1024)\nConditioning complete',
-                        code: 'text_input = tokenizer(\n    prompt,\n    padding="max_length",\n    max_length=77,\n    return_tensors="pt"\n)\ntext_embeddings = text_encoder(text_input.input_ids.to("cuda"))'
-                    },
-                    {
-                        title: "4️⃣ Diffusion Process",
-                        explanation: "The model iteratively denoises random noise guided by the text embeddings. 30 steps gradually refine the image from noise to the final result.",
-                        data: 'Running diffusion process...\nSteps: 30\nProgress: [████████████████] 100%\nTime: 12.5 seconds',
-                        code: 'latents = torch.randn((1, 4, 64, 96)).to("cuda")\n\nfor t in scheduler.timesteps:\n    latent_model_input = scheduler.scale_model_input(latents, t)\n    noise_pred = unet(latent_model_input, t, text_embeddings).sample\n    latents = scheduler.step(noise_pred, t, latents).prev_sample'
-                    },
-                    {
-                        title: "5️⃣ Image Decoding",
-                        explanation: "The final latent representation is decoded into a pixel-space image using the VAE decoder. The image is saved to disk.",
-                        data: 'Decoding latents to image...\nVAE decode complete\nImage size: 768x512\nSaved: ./data/generated_images/image_001.png',
-                        code: 'image = vae.decode(latents / 0.18215).sample\nimage = (image / 2 + 0.5).clamp(0, 1)\nimage = image.cpu().permute(0, 2, 3, 1).numpy()[0]\n\nfrom PIL import Image\nim = Image.fromarray((image * 255).astype("uint8"))\nim.save("image_001.png")'
-                    },
-                    {
-                        title: "6️⃣ Result Delivery",
-                        explanation: "The generated image path is returned to the user. The image is saved locally and can be opened or used in other applications.",
-                        data: 'Image generated successfully!\n\nPath: ./data/generated_images/image_001.png\nSize: 768x512 pixels\nFormat: PNG',
-                        code: 'result = {\n    "success": True,\n    "image_path": "./data/generated_images/image_001.png",\n    "prompt": prompt,\n    "size": "768x512"\n}\nprint(f"✅ Image saved to: {result[\'image_path\']}")'
-                    }
-                ]
-            },
-            "code-exec": {
-                name: "Code Execution",
-                example: "Execute: [x**2 for x in range(10)]",
-                steps: [
-                    {
-                        title: "1️⃣ Code Submission",
-                        explanation: "User submits Python code to be executed. The code is validated and prepared for safe execution.",
-                        data: 'Code: [x**2 for x in range(10)]\nLanguage: Python\nValidating syntax...',
-                        code: 'code = "[x**2 for x in range(10)]"\n\nimport ast\ntry:\n    ast.parse(code)\n    print("✅ Syntax valid")\nexcept SyntaxError as e:\n    print(f"❌ Syntax error: {e}")'
-                    },
-                    {
-                        title: "2️⃣ Security Check",
-                        explanation: "The code is analyzed for dangerous operations. Restricted imports (os, subprocess, etc.) and file operations are blocked.",
-                        data: 'Security scan...\n✅ No dangerous imports\n✅ No file operations\n✅ No subprocess calls\nSafe to execute',
-                        code: 'FORBIDDEN_IMPORTS = ["os", "subprocess", "sys", "socket"]\nFORBIDDEN_BUILTINS = ["open", "eval", "exec", "__import__"]\n\ntree = ast.parse(code)\nfor node in ast.walk(tree):\n    if isinstance(node, ast.Import):\n        if any(alias.name in FORBIDDEN_IMPORTS for alias in node.names):\n            raise SecurityError("Forbidden import")'
-                    },
-                    {
-                        title: "3️⃣ Sandboxed Execution",
-                        explanation: "Code runs in a restricted namespace with limited builtins. Has timeout protection (5 seconds default) to prevent infinite loops.",
-                        data: 'Executing in sandbox...\nTimeout: 5 seconds\nRestricted namespace\nExecution started...',
-                        code: 'import signal\nfrom io import StringIO\nimport sys\n\noutput = StringIO()\nsys.stdout = output\n\ndef timeout_handler(signum, frame):\n    raise TimeoutError("Execution timeout")\n\nsignal.signal(signal.SIGALRM, timeout_handler)\nsignal.alarm(5)  # 5 second timeout'
-                    },
-                    {
-                        title: "4️⃣ Code Execution",
-                        explanation: "The code runs with captured stdout/stderr. Any print statements or expression results are captured for return.",
-                        data: 'Executing: [x**2 for x in range(10)]\nExecution time: 0.002 seconds\nOutput captured',
-                        code: 'safe_globals = {\n    "__builtins__": {\n        "range": range,\n        "len": len,\n        "print": print,\n        # ... limited set of safe functions\n    }\n}\n\ntry:\n    result = eval(code, safe_globals)\n    print(f"Result: {result}")\nexcept Exception as e:\n    print(f"Error: {e}")'
-                    },
-                    {
-                        title: "5️⃣ Result Capture",
-                        explanation: "The execution result is captured, whether it's a return value, print output, or error. Stdout is restored.",
-                        data: 'Execution complete!\n\nResult: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]\nExecution time: 0.002s\nMemory: 1.2 MB',
-                        code: 'signal.alarm(0)  # Cancel timeout\nsys.stdout = sys.__stdout__\n\noutput_text = output.getvalue()\nresult_data = {\n    "success": True,\n    "result": result,\n    "output": output_text,\n    "execution_time": 0.002\n}'
-                    },
-                    {
-                        title: "6️⃣ Response Formatting",
-                        explanation: "The result is formatted and returned to the user with execution metadata.",
-                        data: 'Formatted Result:\n\n>>> [x**2 for x in range(10)]\n[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]\n\n✅ Executed successfully in 0.002s',
-                        code: 'formatted = f"""\n>>> {code}\n{result}\n\n✅ Executed successfully in {execution_time}s\n"""\n\nprint(formatted)'
-                    }
-                ]
-            },
-            web: {
-                name: "Web Tools",
-                example: "Extract text from https://example.com/article",
-                steps: [
-                    {
-                        title: "1️⃣ URL Request",
-                        explanation: "User requests to extract text from a webpage. The system validates the URL and prepares an async HTTP request.",
-                        data: 'URL: https://example.com/article\nValidating URL...\n✅ Valid URL\nPreparing request...',
-                        code: 'import aiohttp\nfrom urllib.parse import urlparse\n\nurl = "https://example.com/article"\nparsed = urlparse(url)\nif not parsed.scheme or not parsed.netloc:\n    raise ValueError("Invalid URL")'
-                    },
-                    {
-                        title: "2️⃣ Async Fetch",
-                        explanation: "An async HTTP GET request is made to fetch the webpage content. Headers are set to mimic a browser.",
-                        data: 'Fetching webpage...\nStatus: 200 OK\nContent-Type: text/html\nSize: 45 KB',
-                        code: 'headers = {\n    "User-Agent": "Mozilla/5.0 (compatible)"\n}\n\nasync with aiohttp.ClientSession() as session:\n    async with session.get(url, headers=headers) as response:\n        html = await response.text()\n        print(f"Status: {response.status}")\n        print(f"Size: {len(html)} bytes")'
-                    },
-                    {
-                        title: "3️⃣ HTML Parsing",
-                        explanation: "BeautifulSoup parses the HTML and extracts the main content, removing navigation, footer, ads, and other non-content elements.",
-                        data: 'Parsing HTML...\nRemoving: nav, footer, aside, script, style\nExtracting main content...\nParagraphs found: 15',
-                        code: 'from bs4 import BeautifulSoup\n\nsoup = BeautifulSoup(html, "html.parser")\n\n# Remove non-content elements\nfor tag in soup(["nav", "footer", "aside", "script", "style"]):\n    tag.decompose()\n\nmain_content = soup.find("main") or soup.find("article") or soup.body'
-                    },
-                    {
-                        title: "4️⃣ Text Extraction",
-                        explanation: "Clean text is extracted from the parsed HTML. Whitespace is normalized and empty lines are removed.",
-                        data: 'Extracting text...\nRaw text: 8,500 words\nCleaning whitespace...\nFinal text: 8,234 words',
-                        code: 'text = main_content.get_text(separator="\\n", strip=True)\n\n# Clean up whitespace\nlines = [line.strip() for line in text.split("\\n")]\nlines = [line for line in lines if line]\nclean_text = "\\n".join(lines)\n\nprint(f"Extracted {len(clean_text)} characters")'
-                    },
-                    {
-                        title: "5️⃣ Content Processing",
-                        explanation: "The extracted text is optionally processed further - summarized, indexed for RAG, or searched for keywords.",
-                        data: 'Processing content...\nTitle: "Advanced Web Scraping Techniques"\nAuthor: John Doe\nWord count: 8,234\nReadability: College level',
-                        code: 'import re\n\ntitle = soup.find("h1").get_text() if soup.find("h1") else "Unknown"\nauthor = soup.find("meta", {"name": "author"})\nauthor = author["content"] if author else "Unknown"\n\nword_count = len(clean_text.split())\nmetadata = {\n    "title": title,\n    "author": author,\n    "word_count": word_count,\n    "url": url\n}'
-                    },
-                    {
-                        title: "6️⃣ Result Delivery",
-                        explanation: "The extracted and cleaned text is returned with metadata. Can be saved, indexed for RAG, or passed to LLM for summarization.",
-                        data: 'Extraction complete!\n\nText: [8,234 words]\nMetadata: {title, author, url, word_count}\nReady for processing',
-                        code: 'result = {\n    "success": True,\n    "text": clean_text,\n    "metadata": metadata,\n    "url": url\n}\n\n# Optional: Save to file\nwith open("extracted_text.txt", "w") as f:\n    f.write(clean_text)\n\nprint("✅ Text extraction complete")'
-                    }
-                ]
-            },
-            data: {
-                name: "Data Analysis",
-                example: "Load sales.csv and create bar chart",
-                steps: [
-                    {
-                        title: "1️⃣ Data Loading",
-                        explanation: "User requests to load a CSV file. Pandas reads the file with automatic type inference and encoding detection.",
-                        data: 'Loading: ./sales.csv\nEncoding: UTF-8\nRows: 1,000\nColumns: 8',
-                        code: 'import pandas as pd\nimport chardet\n\n# Detect encoding\nwith open("sales.csv", "rb") as f:\n    result = chardet.detect(f.read())\n    encoding = result["encoding"]\n\ndf = pd.read_csv("sales.csv", encoding=encoding)\nprint(f"Loaded {len(df)} rows, {len(df.columns)} columns")'
-                    },
-                    {
-                        title: "2️⃣ Data Inspection",
-                        explanation: "The system automatically inspects the data - column types, missing values, basic statistics, and provides a summary.",
-                        data: 'Data Summary:\n- product (object): 1000 non-null\n- revenue (float64): 998 non-null\n- region (object): 1000 non-null\n- date (datetime64): 1000 non-null',
-                        code: 'print("Data Types:")\nprint(df.dtypes)\nprint("\\nMissing Values:")\nprint(df.isnull().sum())\nprint("\\nBasic Stats:")\nprint(df.describe())\n\n# Auto-detect date columns\nfor col in df.columns:\n    if "date" in col.lower():\n        df[col] = pd.to_datetime(df[col])'
-                    },
-                    {
-                        title: "3️⃣ Data Preparation",
-                        explanation: "Data is cleaned and prepared for visualization. This includes handling missing values, grouping, and aggregation.",
-                        data: 'Preparing data for chart...\nGrouping by: product\nAggregating: revenue (sum)\nSorted by: revenue (descending)',
-                        code: 'chart_data = df.groupby("product")["revenue"].sum()\nchart_data = chart_data.sort_values(ascending=False)\nchart_data = chart_data.head(10)  # Top 10\n\nprint("Chart Data:")\nprint(chart_data)'
-                    },
-                    {
-                        title: "4️⃣ Visualization Creation",
-                        explanation: "Using matplotlib/seaborn, a bar chart is created with the prepared data. Styling is applied automatically.",
-                        data: 'Creating bar chart...\nChart type: Bar\nX-axis: product\nY-axis: revenue\nColor: gradient',
-                        code: 'import matplotlib.pyplot as plt\nimport seaborn as sns\n\nsns.set_style("whitegrid")\nplt.figure(figsize=(12, 6))\n\ncolors = sns.color_palette("viridis", len(chart_data))\nplt.bar(range(len(chart_data)), chart_data.values, color=colors)\nplt.xticks(range(len(chart_data)), chart_data.index, rotation=45)\nplt.xlabel("Product")\nplt.ylabel("Revenue ($)")\nplt.title("Top 10 Products by Revenue")'
-                    },
-                    {
-                        title: "5️⃣ Chart Enhancement",
-                        explanation: "The chart is enhanced with labels, gridlines, legends, and formatted axes for better readability.",
-                        data: 'Enhancing chart...\n✅ Value labels added\n✅ Grid customized\n✅ Title formatted\n✅ Axes labeled',
-                        code: '# Add value labels on bars\nfor i, v in enumerate(chart_data.values):\n    plt.text(i, v, f"${v:,.0f}", ha="center", va="bottom")\n\n# Format y-axis as currency\nfrom matplotlib.ticker import FuncFormatter\ndef currency(x, pos):\n    return f"${x:,.0f}"\nplt.gca().yaxis.set_major_formatter(FuncFormatter(currency))\n\nplt.tight_layout()'
-                    },
-                    {
-                        title: "6️⃣ Chart Export",
-                        explanation: "The chart is saved to a file and the path is returned. The image can be viewed or embedded in reports.",
-                        data: 'Chart saved!\n\nPath: ./data/analysis/sales_chart.png\nSize: 1200x600\nFormat: PNG\nDPI: 300',
-                        code: 'output_path = "./data/analysis/sales_chart.png"\nplt.savefig(output_path, dpi=300, bbox_inches="tight")\nplt.close()\n\nresult = {\n    "success": True,\n    "chart_path": output_path,\n    "data_points": len(chart_data),\n    "type": "bar"\n}\nprint(f"✅ Chart saved to: {output_path}")'
-                    }
-                ]
-            },
-            files: {
-                name: "File Operations",
-                example: "Find all Python files in ./project",
-                steps: [
-                    {
-                        title: "1️⃣ Search Request",
-                        explanation: "User requests to search for files matching a pattern. The system prepares a recursive search.",
-                        data: 'Pattern: **/*.py\nDirectory: ./project\nRecursive: Yes\nSearching...',
-                        code: 'import glob\nimport os\n\npattern = "**/*.py"\nbase_dir = "./project"\nsearch_path = os.path.join(base_dir, pattern)\n\nprint(f"Searching: {search_path}")'
-                    },
-                    {
-                        title: "2️⃣ File Discovery",
-                        explanation: "The system recursively walks through directories finding all files matching the pattern (.py files in this case).",
-                        data: 'Scanning directories...\n./project/\n./project/src/\n./project/tests/\nFound 45 Python files',
-                        code: 'files = glob.glob(search_path, recursive=True)\nfiles = [f for f in files if os.path.isfile(f)]\n\nprint(f"Found {len(files)} files")\nfor f in files[:5]:\n    print(f"  - {f}")'
-                    },
-                    {
-                        title: "3️⃣ File Metadata",
-                        explanation: "For each file, metadata is collected including size, modification time, and relative path.",
-                        data: 'Collecting metadata...\nFile sizes: 2.3 MB total\nLast modified: analyzed\nPermissions: checked',
-                        code: 'import os\nfrom datetime import datetime\n\nfile_data = []\nfor f in files:\n    stat = os.stat(f)\n    file_data.append({\n        "path": f,\n        "size": stat.st_size,\n        "modified": datetime.fromtimestamp(stat.st_mtime),\n        "relative_path": os.path.relpath(f, base_dir)\n    })'
-                    },
-                    {
-                        title: "4️⃣ Result Sorting",
-                        explanation: "Files are sorted by modification time (newest first) and formatted for display.",
-                        data: 'Sorting by: modified date (newest first)\nFormatting paths...\nPreparing summary...',
-                        code: 'file_data.sort(key=lambda x: x["modified"], reverse=True)\n\ntotal_size = sum(f["size"] for f in file_data)\ntotal_size_mb = total_size / (1024 * 1024)\n\nprint(f"Total: {len(file_data)} files, {total_size_mb:.2f} MB")'
-                    },
-                    {
-                        title: "5️⃣ Content Preview",
-                        explanation: "Optionally, the first few lines of each file can be previewed for quick inspection.",
-                        data: 'Previewing files...\n\nmain.py (523 bytes):\n  import asyncio\n  from langchain_mcp_client import...\n\nutils.py (1.2 KB):\n  def helper_function()...',
-                        code: 'for file_info in file_data[:3]:\n    print(f"\\n{file_info[\'relative_path\']} ({file_info[\'size\']} bytes):")\n    with open(file_info["path"]) as f:\n        lines = f.readlines()[:3]\n        for line in lines:\n            print(f"  {line.rstrip()}")'
-                    },
-                    {
-                        title: "6️⃣ Result Summary",
-                        explanation: "A comprehensive summary is returned with file list, statistics, and optional content previews.",
-                        data: 'Search complete!\n\nFiles found: 45\nTotal size: 2.3 MB\nLargest: models.py (156 KB)\nNewest: main.py (modified 2 hours ago)',
-                        code: 'result = {\n    "success": True,\n    "files": file_data,\n    "count": len(file_data),\n    "total_size": total_size,\n    "pattern": pattern\n}\n\nprint(f"✅ Found {len(file_data)} files matching {pattern}")\nreturn result'
-                    }
-                ]
-            },
-            git: {
-                name: "Git Integration",
-                example: "Show git status and recent commits",
-                steps: [
-                    {
-                        title: "1️⃣ Repository Detection",
-                        explanation: "The system detects the Git repository in the current directory and validates it.",
-                        data: 'Checking for git repository...\n✅ Found .git directory\nRepository: MCP_Server_Mahendran\nBranch: claude/update-visualization',
-                        code: 'import git\nimport os\n\nrepo_path = os.getcwd()\ntry:\n    repo = git.Repo(repo_path)\n    print(f"Repository: {repo.working_dir}")\n    print(f"Active branch: {repo.active_branch.name}")\nexcept git.InvalidGitRepositoryError:\n    print("❌ Not a git repository")'
-                    },
-                    {
-                        title: "2️⃣ Status Check",
-                        explanation: "Git status is checked to show modified, staged, and untracked files.",
-                        data: 'Git Status:\n\nModified: 3 files\n  - visualization.html\n  - README.md\n  - main.py\n\nUntracked: 1 file\n  - new_feature.py',
-                        code: 'changed_files = [item.a_path for item in repo.index.diff(None)]\nstaged_files = [item.a_path for item in repo.index.diff("HEAD")]\nuntracked = repo.untracked_files\n\nprint("Modified:", changed_files)\nprint("Staged:", staged_files)\nprint("Untracked:", untracked)'
-                    },
-                    {
-                        title: "3️⃣ Commit History",
-                        explanation: "Recent commits are fetched with metadata: hash, author, date, and message.",
-                        data: 'Recent Commits (last 5):\n\n1. aa5d338 - Merge pull request #4\n2. 62315af - Massive upgrade to framework\n3. 9bb27d9 - Add LangChain integration\n4. 46a501d - Add visualization\n5. 5b9aa8a - Add documentation',
-                        code: 'commits = list(repo.iter_commits("HEAD", max_count=5))\n\nfor commit in commits:\n    print(f"{commit.hexsha[:7]} - {commit.summary}")\n    print(f"  Author: {commit.author.name}")\n    print(f"  Date: {commit.committed_datetime}")\n    print()'
-                    },
-                    {
-                        title: "4️⃣ Diff Analysis",
-                        explanation: "Git diff shows the actual changes in modified files, line by line.",
-                        data: 'Diff for visualization.html:\n\n+ <title>Advanced MCP Framework</title>\n- <title>Basic LangChain Demo</title>\n+ 31+ tools across 10 domains\n- 2 basic tools',
-                        code: 'diff = repo.git.diff("HEAD")\nprint("Changes in working directory:")\nprint(diff)\n\n# Or get diff for specific file\ndiff_file = repo.git.diff("HEAD", "visualization.html")\nprint(f"\\nChanges in visualization.html:")\nprint(diff_file)'
-                    },
-                    {
-                        title: "5️⃣ Branch Information",
-                        explanation: "Information about branches, remotes, and tracking status is collected.",
-                        data: 'Branch Info:\n\nCurrent: claude/update-visualization\nTracking: origin/claude/update-visualization\nAhead: 0 commits\nBehind: 0 commits\nRemote: origin (github.com)',
-                        code: 'current = repo.active_branch\ntracking = current.tracking_branch()\n\nif tracking:\n    ahead = repo.iter_commits(f"{tracking}..{current}")\n    behind = repo.iter_commits(f"{current}..{tracking}")\n    ahead_count = sum(1 for _ in ahead)\n    behind_count = sum(1 for _ in behind)\n    print(f"Ahead: {ahead_count}, Behind: {behind_count}")\n\nfor remote in repo.remotes:\n    print(f"Remote: {remote.name} ({remote.url})")'
-                    },
-                    {
-                        title: "6️⃣ Summary Report",
-                        explanation: "A comprehensive Git status report is compiled and returned to the user.",
-                        data: 'Git Summary:\n\n📊 Status: 3 modified, 1 untracked\n🌿 Branch: claude/update-visualization\n📝 Last commit: aa5d338 (2 days ago)\n🔄 Sync: Up to date with origin',
-                        code: 'summary = {\n    "repository": repo.working_dir,\n    "branch": repo.active_branch.name,\n    "modified": len(changed_files),\n    "staged": len(staged_files),\n    "untracked": len(untracked),\n    "last_commit": commits[0].hexsha[:7],\n    "last_commit_message": commits[0].summary\n}\n\nprint("✅ Git status retrieved")\nreturn summary'
-                    }
-                ]
-            },
-            agents: {
-                name: "Multi-Agent System",
-                example: "Research and analyze climate data",
-                steps: [
-                    {
-                        title: "1️⃣ Task Decomposition",
-                        explanation: "The orchestrator analyzes the complex task and decomposes it into subtasks that can be handled by specialized agents.",
-                        data: 'Task: "Research climate change and create report"\n\nDecomposed into:\n1. Research phase (Researcher agent)\n2. Data analysis (Analyst agent)\n3. Report writing (Writer agent)\n4. Quality review (Critic agent)',
-                        code: 'from multi_agent_system import MultiAgentOrchestrator, AgentRole\n\norchestrator = MultiAgentOrchestrator(llm_client)\ntask = "Research climate change and create report"\n\nsubtasks = orchestrator.decompose_task(task)\nprint("Subtasks:", subtasks)'
-                    },
-                    {
-                        title: "2️⃣ Researcher Agent",
-                        explanation: "The Researcher agent has access to web scraping, RAG, and document processing tools. It gathers information from multiple sources.",
-                        data: 'Researcher Agent activated\n\nActions:\n1. Web search for "climate change data"\n2. Extract text from 5 articles\n3. Index documents in RAG\n4. Compile research summary',
-                        code: 'researcher = orchestrator.get_agent(AgentRole.RESEARCHER)\n\n# Researcher has access to:\n# - web_extract_text\n# - rag_index_document\n# - rag_query\n# - web_search_in_page\n\nresearch_result = await researcher.execute(\n    "Research climate change trends",\n    tools=["web_extract_text", "rag_index_document"]\n)'
-                    },
-                    {
-                        title: "3️⃣ Analyst Agent",
-                        explanation: "The Analyst agent receives the research data and performs statistical analysis, creates visualizations, and identifies trends.",
-                        data: 'Analyst Agent activated\n\nActions:\n1. Load climate data CSV\n2. Statistical analysis\n3. Create temperature trend chart\n4. Create CO2 correlation heatmap\n5. Generate insights',
-                        code: 'analyst = orchestrator.get_agent(AgentRole.ANALYST)\n\n# Analyst has access to:\n# - data_load_csv\n# - data_get_summary\n# - data_query\n# - data_create_chart\n\nanalysis_result = await analyst.execute(\n    "Analyze climate data and create visualizations",\n    context=research_result\n)'
-                    },
-                    {
-                        title: "4️⃣ Writer Agent",
-                        explanation: "The Writer agent takes research findings and analysis results to create a comprehensive, well-structured report.",
-                        data: 'Writer Agent activated\n\nActions:\n1. Organize findings\n2. Create report structure\n3. Write executive summary\n4. Detail methodology\n5. Present conclusions\n6. Add visualizations',
-                        code: 'writer = orchestrator.get_agent(AgentRole.WRITER)\n\n# Writer has access to:\n# - file_write\n# - summarize_document\n# - format_code (for formatting)\n\nreport = await writer.execute(\n    "Write comprehensive climate change report",\n    context={\n        "research": research_result,\n        "analysis": analysis_result\n    }\n)'
-                    },
-                    {
-                        title: "5️⃣ Critic Agent",
-                        explanation: "The Critic agent reviews the report for quality, accuracy, completeness, and provides improvement suggestions.",
-                        data: 'Critic Agent activated\n\nReview checklist:\n✅ Data sources cited\n✅ Analysis methodology clear\n✅ Visualizations informative\n⚠️ Conclusion could be stronger\n✅ Grammar and formatting good\n\nOverall score: 8.5/10',
-                        code: 'critic = orchestrator.get_agent(AgentRole.CRITIC)\n\n# Critic evaluates:\n# - Completeness\n# - Accuracy\n# - Clarity\n# - Formatting\n# - Citations\n\nreview = await critic.execute(\n    "Review climate change report",\n    context=report\n)\n\nif review.score < 8:\n    # Request revisions\n    report = await writer.revise(report, review.feedback)'
-                    },
-                    {
-                        title: "6️⃣ Final Orchestration",
-                        explanation: "The orchestrator compiles results from all agents, handles any revisions, and produces the final deliverable.",
-                        data: 'Orchestration complete!\n\nAgents used: 4\nTotal time: 3m 45s\nRevisions: 1\n\nDeliverables:\n- Climate Report.pdf (45 pages)\n- temperature_trend.png\n- co2_correlation.png\n- research_sources.txt',
-                        code: 'workflow_result = {\n    "success": True,\n    "report_path": "./climate_report.pdf",\n    "visualizations": [\n        "./temperature_trend.png",\n        "./co2_correlation.png"\n    ],\n    "agents_used": [AgentRole.RESEARCHER, AgentRole.ANALYST, AgentRole.WRITER, AgentRole.CRITIC],\n    "execution_time": 225,  # seconds\n    "quality_score": 8.5\n}\n\nprint("✅ Multi-agent workflow complete!")\nreturn workflow_result'
-                    }
-                ]
-            }
-        };
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.dataset.tab;
 
-        let currentDomain = "overview";
-        let currentStep = 0;
-        let totalSteps = 5;
+                // Update button states
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
 
-        // Initialize
-        function init() {
-            loadDomain("overview");
-            updateControls();
-        }
+                // Update content visibility
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
 
-        // Load domain
-        function loadDomain(domainKey) {
-            currentDomain = domainKey;
-            currentStep = 0;
-            totalSteps = domains[domainKey].steps.length;
-            renderStep();
-            updateControls();
-        }
-
-        // Render current step
-        function renderStep() {
-            const viz = document.getElementById('visualization');
-            const domain = domains[currentDomain];
-            const step = domain.steps[currentStep];
-
-            let content = `
-                <div class="component active">
-                    <h3>
-                        <span class="component-icon">${step.title.substring(0, 2)}</span>
-                        ${step.title}
-                    </h3>
-
-                    <div class="explanation visible">
-                        <h4>📖 What's Happening?</h4>
-                        <p>${step.explanation}</p>
-                    </div>
-            `;
-
-            // Architecture layers
-            if (step.architecture && step.layers) {
-                content += `
-                    <div class="architecture">
-                        <h4>System Architecture</h4>
-                        ${step.layers.map(layer => `
-                            <div class="arch-layer">
-                                <div class="layer-title">${layer.title}</div>
-                                <div class="layer-desc">${layer.desc}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            // Tools grid
-            if (step.tools) {
-                content += `
-                    <div class="tools-grid">
-                        ${step.tools.map(tool => `
-                            <div class="tool-card">
-                                <div class="tool-name">${tool.icon} ${tool.name}</div>
-                                <div class="tool-desc">${tool.desc}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            // Features list
-            if (step.features) {
-                content += `
-                    <div class="tools-grid">
-                        ${step.features.map(feature => `
-                            <div class="tool-card">
-                                <div class="tool-name">✓ ${feature.title}</div>
-                                <div class="tool-desc">${feature.desc}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            // Use cases
-            if (step.useCases) {
-                content += `
-                    <div class="tools-grid">
-                        ${step.useCases.map(useCase => `
-                            <div class="tool-card">
-                                <div class="tool-name">💡 ${useCase.title}</div>
-                                <div class="tool-desc">${useCase.desc}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            // Metrics
-            if (step.metrics) {
-                content += `
-                    <div class="data-box visible">
-                        <div class="label">📊 Growth Metrics:</div>
-                        <pre>${step.metrics.map(m =>
-                            `${m.label.padEnd(20)} | Before: ${m.before.padEnd(10)} | After: ${m.after.padEnd(10)} | ${m.growth}`
-                        ).join('\n')}</pre>
-                    </div>
-                `;
-            }
-
-            // Data box
-            if (step.data) {
-                content += `
-                    <div class="data-box visible">
-                        <div class="label">📊 Data:</div>
-                        <pre>${step.data}</pre>
-                    </div>
-                `;
-            }
-
-            // Code snippet
-            if (step.code) {
-                content += `
-                    <div class="code-snippet visible">
-                        <div class="label" style="color: #4CAF50; margin-bottom: 10px;">💻 Code:</div>
-                        <pre>${highlightCode(step.code)}</pre>
-                    </div>
-                `;
-            }
-
-            content += `</div>`;
-
-            if (currentStep < totalSteps - 1) {
-                content += '<div class="arrow visible">⬇️</div>';
-            }
-
-            viz.innerHTML = content;
-            updateProgress();
-        }
-
-        // Highlight code
-        function highlightCode(code) {
-            return code
-                .replace(/(async|def|await|return|import|from|if|else|for|in|class|try|except|with|as)/g, '<span class="keyword">$1</span>')
-                .replace(/(".*?"|'.*?')/g, '<span class="string">$1</span>')
-                .replace(/(#.*)/g, '<span class="comment">$1</span>')
-                .replace(/(\w+)\(/g, '<span class="function">$1</span>(');
-        }
-
-        // Update controls
-        function updateControls() {
-            document.getElementById('currentStep').textContent = currentStep + 1;
-            document.getElementById('totalSteps').textContent = totalSteps;
-            document.getElementById('prevBtn').disabled = currentStep === 0;
-            document.getElementById('nextBtn').disabled = currentStep === totalSteps - 1;
-        }
-
-        // Update progress bar
-        function updateProgress() {
-            const progress = ((currentStep + 1) / totalSteps) * 100;
-            document.getElementById('progressFill').style.width = progress + '%';
-        }
-
-        // Event listeners
-        document.getElementById('nextBtn').addEventListener('click', () => {
-            if (currentStep < totalSteps - 1) {
-                currentStep++;
-                renderStep();
-                updateControls();
-            }
-        });
-
-        document.getElementById('prevBtn').addEventListener('click', () => {
-            if (currentStep > 0) {
-                currentStep--;
-                renderStep();
-                updateControls();
-            }
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            currentStep = 0;
-            renderStep();
-            updateControls();
-        });
-
-        // Domain selection
-        document.querySelectorAll('.domain-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.domain-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                loadDomain(btn.dataset.domain);
+                // Reinitialize the active tab if needed
+                if (tabName === 'animated') {
+                    initFlowchart();
+                    animateStep(currentStep2);
+                }
             });
         });
-
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight' && currentStep < totalSteps - 1) {
-                currentStep++;
-                renderStep();
-                updateControls();
-            } else if (e.key === 'ArrowLeft' && currentStep > 0) {
-                currentStep--;
-                renderStep();
-                updateControls();
-            } else if (e.key === 'r' || e.key === 'R') {
-                currentStep = 0;
-                renderStep();
-                updateControls();
-            }
-        });
-
-        // Initialize on load
-        init();
     </script>
 </body>
 </html>

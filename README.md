@@ -1,16 +1,25 @@
 # LangChain + Ollama + MCP Server
 
-A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with Calculator and Weather tools.
+A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with multiple intelligent tools.
 
 ## Features
 
 - **LangChain Integration**: Leverages LangChain for building LLM applications
 - **Ollama Support**: Uses local Ollama models for privacy and control
-- **MCP Server**: Implements a Model Control Plane with two tools:
+- **MCP Server**: Implements a Model Control Plane with **8 powerful tools**:
   - **Calculator**: Perform arithmetic operations (add, subtract, multiply, divide)
   - **Weather**: Get weather information for any city (mock data for demo)
+  - **Gold Price**: Get live market gold prices in multiple currencies (USD, EUR, GBP, INR)
+  - **Email**: Send emails with subject and body to recipients
+  - **RAG (Retrieval-Augmented Generation)**: Upload documents and query them with semantic search
+  - **Code Execution**: Execute Python code safely with output capture
+  - **Web Scraping**: Extract text and links from web pages
+  - **File Operations**: Read, write, list files and directories
+- **Modern Web Interface**: Beautiful responsive UI with dark mode and toast notifications
 - **Interactive CLI**: User-friendly command-line interface
 - **Demo Mode**: Pre-configured examples to showcase capabilities
+- **Interactive Visualizations**: Two-tab web interface showing step-by-step and animated flows
+- **Document Intelligence**: RAG system with vector database for document search
 
 ## Architecture
 
@@ -36,11 +45,33 @@ A powerful integration combining LangChain, Ollama, and a Model Control Plane (M
 │                   MCP Server                            │
 │                (mcp_server.py)                          │
 │                                                         │
-│  ┌─────────────────┐       ┌──────────────────┐       │
-│  │   Calculator    │       │     Weather      │       │
-│  │      Tool       │       │       Tool       │       │
-│  └─────────────────┘       └──────────────────┘       │
-└─────────────────────────────────────────────────────────┘
+│  ┌──────────┐  ┌────────┐  ┌─────────┐  ┌──────┐     │
+│  │Calculator│  │Weather │  │GoldPrice│  │Email │     │
+│  │   Tool   │  │  Tool  │  │  Tool   │  │ Tool │     │
+│  └──────────┘  └────────┘  └─────────┘  └──────┘     │
+│                                                         │
+│  ┌──────────────────────────────────────────────┐     │
+│  │          RAG Query Tool                       │     │
+│  │      (Document Search & Retrieval)           │     │
+│  └────────────────┬─────────────────────────────┘     │
+└───────────────────┼───────────────────────────────────┘
+                    │
+                    ▼
+         ┌────────────────────────┐
+         │    RAG System          │
+         │  (rag_system.py)       │
+         │                        │
+         │  • Document Upload     │
+         │  • Text Extraction     │
+         │  • Chunking            │
+         │  • Vector Search       │
+         └──────────┬─────────────┘
+                    │
+                    ▼
+         ┌────────────────────────┐
+         │     ChromaDB           │
+         │  (Vector Database)     │
+         └────────────────────────┘
 ```
 
 ## Prerequisites
@@ -136,12 +167,21 @@ asyncio.run(main())
 
 ```
 MCP_Server_Mahendran/
-├── main.py                    # Main CLI application
-├── langchain_mcp_client.py    # LangChain + Ollama + MCP integration
-├── mcp_server.py              # MCP server with tools
-├── requirements.txt           # Python dependencies
-├── .gitignore                # Git ignore rules
-└── README.md                 # This file
+├── main.py                       # Main CLI application
+├── langchain_mcp_client.py       # LangChain + Ollama + MCP integration
+├── mcp_server.py                 # MCP server with 5 tools
+├── rag_system.py                 # RAG system with ChromaDB
+├── web_server.py                 # Flask web server
+├── requirements.txt              # Python dependencies
+├── .gitignore                    # Git ignore rules
+├── README.md                     # This file
+├── RAG_README.md                 # Detailed RAG documentation
+├── WEB_FRONTEND_README.md        # Web interface documentation
+├── templates/
+│   └── index.html                # Web frontend with RAG interface
+├── visualization.html            # Interactive flow visualization
+├── uploads/                      # Temporary upload directory
+└── rag_db/                       # ChromaDB vector database
 ```
 
 ## MCP Tools
@@ -185,6 +225,115 @@ Gets weather information for a city (mock data for demonstration).
   }
 }
 ```
+
+### Gold Price Tool
+
+Gets live market gold prices in multiple currencies.
+
+**Parameters:**
+- `currency`: "USD", "EUR", "GBP", or "INR" (default: "USD")
+
+**Example:**
+```json
+{
+  "tool": "gold_price",
+  "arguments": {
+    "currency": "USD"
+  }
+}
+```
+
+**Sample Output:**
+```
+💰 Live Gold Price
+────────────────────────────────
+Price: USD 2,050.25 per troy ounce
+24h Change: +0.75% (+USD 15.23)
+Currency: USD
+Updated: 2025-11-14 10:30:00
+
+Market Status: 🟢 Open
+```
+
+### Email Tool
+
+Send emails with subject and body to recipients (simulated for demo).
+
+**Parameters:**
+- `to`: Recipient email address (required)
+- `subject`: Email subject line (required)
+- `body`: Email body content (required)
+
+**Example:**
+```json
+{
+  "tool": "send_email",
+  "arguments": {
+    "to": "user@example.com",
+    "subject": "Gold Price Alert",
+    "body": "Current gold price is $2,050 per ounce"
+  }
+}
+```
+
+**Sample Output:**
+```
+📧 Email Sent Successfully!
+────────────────────────────────
+To: user@example.com
+Subject: Gold Price Alert
+Sent: 2025-11-14 10:30:00
+
+Message Preview:
+Current gold price is $2,050 per ounce
+
+Status: ✅ Delivered
+```
+
+### RAG (Retrieval-Augmented Generation) Tool
+
+Search uploaded documents using semantic similarity and natural language queries.
+
+**Parameters:**
+- `query`: The question or search query (required)
+- `n_results`: Number of relevant documents to retrieve (optional, default: 3)
+
+**Example:**
+```json
+{
+  "tool": "rag_query",
+  "arguments": {
+    "query": "What does the document say about AI?",
+    "n_results": 3
+  }
+}
+```
+
+**Sample Output:**
+```
+📚 RAG Query Results
+────────────────────────────────
+Query: What does the document say about AI?
+Found: 3 relevant document(s)
+
+Result #1 (Relevance: High)
+────────────────────────────────
+Artificial Intelligence (AI) is the simulation of human
+intelligence processes by machines, especially computer systems...
+
+Metadata: ai_guide.pdf | Length: 450 chars
+────────────────────────────────
+💡 Tip: You can use this information to answer your question!
+```
+
+**Features:**
+- Upload documents via web interface (TXT, PDF, DOC, DOCX, JSON, MD, CSV)
+- Semantic search using vector embeddings
+- Automatic document chunking for better retrieval
+- Relevance scoring and ranking
+- ChromaDB vector database for efficient search
+
+**For detailed RAG documentation, see [RAG_README.md](RAG_README.md)**
 
 ## Configuration
 
@@ -241,6 +390,60 @@ elif name == "my_custom_tool":
     return await self.my_custom_tool(arguments)
 ```
 
+## Web Interface
+
+### Starting the Web Server
+
+Launch the beautiful web interface with RAG support:
+
+```bash
+python web_server.py
+```
+
+Then open your browser to: **http://localhost:5000**
+
+### Web Interface Features
+
+✅ **Interactive Chat**
+- Real-time conversation with AI agent
+- Beautiful gradient UI design
+- Message history and timestamps
+
+✅ **RAG Document Upload**
+- Drag-and-drop file upload
+- Support for 7 file formats (TXT, PDF, DOC, DOCX, JSON, MD, CSV)
+- Real-time upload status
+- Database statistics display
+
+✅ **Tool Integration**
+- Quick action buttons for all 5 tools
+- Tool sidebar with examples
+- One-click query templates
+
+✅ **Session Management**
+- Persistent conversations
+- Clear conversation history
+- Per-session state management
+
+**For detailed web interface documentation, see [WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)**
+
+## Documentation
+
+This project includes comprehensive documentation:
+
+- **[README.md](README.md)** (this file) - Main project documentation
+- **[RAG_README.md](RAG_README.md)** - Complete RAG system guide
+  - Document upload and management
+  - Query examples and best practices
+  - API documentation
+  - Troubleshooting guide
+  - Advanced usage patterns
+- **[WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)** - Web interface guide
+  - Quick start instructions
+  - API endpoints
+  - Customization options
+  - Deployment guide
+
 ## Troubleshooting
 
 ### Ollama Connection Issues
@@ -263,6 +466,25 @@ Make sure you're in the virtual environment:
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+### RAG Issues
+
+**No documents found:**
+1. Check if documents were uploaded: Click "🔄 Refresh Stats"
+2. Verify file format is supported
+3. Check server logs for processing errors
+
+**Upload fails:**
+1. Ensure file is under 16MB
+2. Check file extension is supported
+3. Verify disk space for `./rag_db` directory
+
+**Low relevance results:**
+1. Rephrase query using document terminology
+2. Upload more relevant documents
+3. Try requesting more results (n_results=5)
+
+**For detailed RAG troubleshooting, see [RAG_README.md](RAG_README.md)**
 
 ## Development
 
@@ -297,6 +519,8 @@ MIT License - feel free to use this project for any purpose.
 - [LangChain](https://python.langchain.com/) - Framework for LLM applications
 - [Ollama](https://ollama.ai/) - Local LLM inference
 - [MCP](https://modelcontextprotocol.io/) - Model Context Protocol
+- [ChromaDB](https://www.trychroma.com/) - Vector database for RAG
+- [Flask](https://flask.palletsprojects.com/) - Web framework for Python
 
 ## Support
 
