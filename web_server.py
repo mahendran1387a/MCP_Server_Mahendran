@@ -116,18 +116,47 @@ def query():
         # Initialize if needed
         if client_data['client'] is None:
             async def init_client():
-                client = LangChainMCPClient(model_name="llama3.2")
-                await client.initialize()
-                return client
+                try:
+                    client = LangChainMCPClient(model_name="llama3.2")
+                    await client.initialize()
+                    return client
+                except Exception as e:
+                    error_msg = str(e)
+                    if "Connection" in error_msg or "refused" in error_msg:
+                        raise RuntimeError("❌ Ollama is not running. Please start Ollama first:\n\n1. Open a terminal\n2. Run: ollama serve\n3. Refresh this page")
+                    elif "llama3.2" in error_msg or "model" in error_msg:
+                        raise RuntimeError("❌ Model 'llama3.2' not found. Please install it:\n\n1. Open a terminal\n2. Run: ollama pull llama3.2\n3. Wait for download to complete\n4. Refresh this page")
+                    else:
+                        raise RuntimeError(f"❌ Initialization failed: {error_msg}")
 
-            client = asyncio.run(init_client())
-            client_data['client'] = client
+            try:
+                client = asyncio.run(init_client())
+                client_data['client'] = client
+            except RuntimeError as e:
+                return jsonify({
+                    'status': 'error',
+                    'message': str(e)
+                }), 500
 
         # Process query
         async def process():
-            return await client_data['client'].process_query(user_query)
+            try:
+                return await client_data['client'].process_query(user_query)
+            except Exception as e:
+                error_msg = str(e)
+                if "Connection closed" in error_msg or "Connection" in error_msg:
+                    # Reset the client on connection error
+                    client_data['client'] = None
+                    raise RuntimeError("❌ Connection lost. Ollama may have stopped. Please:\n\n1. Check if Ollama is running: ollama serve\n2. Refresh the page\n3. Try your query again")
+                raise
 
-        response = asyncio.run(process())
+        try:
+            response = asyncio.run(process())
+        except RuntimeError as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
 
         # Store in conversation history
         client_data['conversation'].append({
@@ -147,10 +176,22 @@ def query():
             'query': user_query
         })
 
-    except Exception as e:
+    except ConnectionError as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': f"❌ Connection Error: {str(e)}\n\nPlease check:\n1. Ollama is running (ollama serve)\n2. Model is installed (ollama pull llama3.2)"
+        }), 500
+    except Exception as e:
+        error_msg = str(e)
+        # Provide helpful error messages
+        if "Connection" in error_msg:
+            error_msg = "❌ Cannot connect to Ollama. Please start Ollama:\n\nRun: ollama serve"
+        elif "model" in error_msg.lower():
+            error_msg = "❌ Model not found. Please install llama3.2:\n\nRun: ollama pull llama3.2"
+
+        return jsonify({
+            'status': 'error',
+            'message': error_msg
         }), 500
 
 

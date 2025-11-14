@@ -824,10 +824,22 @@
                     console.log('Initialized successfully');
                     showToast('success', 'Connected', 'AI Agent initialized successfully');
                 } else {
-                    showToast('error', 'Initialization Failed', data.message);
+                    const errorTitle = data.message.includes('Ollama') ? 'Ollama Not Running' :
+                                      data.message.includes('Model') ? 'Model Not Found' : 'Initialization Failed';
+                    showToast('error', errorTitle, data.message.split('\n')[0], 10000);
+
+                    // Show detailed error in chat
+                    const messagesContainer = document.getElementById('chatMessages');
+                    const welcomeMsg = messagesContainer.querySelector('.welcome-message');
+                    if (welcomeMsg) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = 'background: #ffebee; padding: 20px; border-radius: 10px; margin: 20px; color: #c62828; white-space: pre-wrap;';
+                        errorDiv.textContent = data.message;
+                        welcomeMsg.appendChild(errorDiv);
+                    }
                 }
             } catch (error) {
-                showToast('error', 'Connection Error', 'Failed to initialize: ' + error.message);
+                showToast('error', 'Connection Error', 'Failed to initialize: ' + error.message, 10000);
             }
         }
 
@@ -891,10 +903,16 @@
                 if (data.status === 'success') {
                     addMessage('assistant', data.response);
                 } else {
-                    showToast('error', 'Query Failed', data.message);
+                    // Show error in chat and as toast
+                    addMessage('assistant', `⚠️ Error:\n\n${data.message}`);
+                    const errorTitle = data.message.includes('Ollama') ? 'Ollama Not Running' :
+                                      data.message.includes('Model') ? 'Model Not Found' :
+                                      data.message.includes('Connection') ? 'Connection Lost' : 'Query Failed';
+                    showToast('error', errorTitle, data.message.split('\n')[0]);
                 }
             } catch (error) {
                 removeLoading();
+                addMessage('assistant', `⚠️ Connection Error:\n\n${error.message}`);
                 showToast('error', 'Connection Error', 'Failed to send message: ' + error.message);
             } finally {
                 isProcessing = false;
