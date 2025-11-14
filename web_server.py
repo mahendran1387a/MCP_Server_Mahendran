@@ -5,18 +5,15 @@ Provides a REST API and web interface for interacting with the AI agent
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-import asyncio
 import uuid
 from datetime import datetime
 import sys
 import os
-import threading
-from concurrent.futures import Future
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from langchain_mcp_client import LangChainMCPClient
+from async_client_manager import get_client_manager
 from rag_system import get_rag_system, process_uploaded_file
 
 app = Flask(__name__)
@@ -35,32 +32,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Initialize RAG system
 rag_system = get_rag_system()
 
-# Store active clients per session
-active_clients = {}
+# Initialize async client manager
+client_manager = get_client_manager()
 
-# Create a single event loop for all async operations
-loop = None
-loop_thread = None
-
-def start_background_loop(loop):
-    """Run event loop in background thread"""
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
-
-def get_or_create_event_loop():
-    """Get or create the background event loop"""
-    global loop, loop_thread
-    if loop is None:
-        loop = asyncio.new_event_loop()
-        loop_thread = threading.Thread(target=start_background_loop, args=(loop,), daemon=True)
-        loop_thread.start()
-    return loop
-
-def run_async(coro):
-    """Run async function in the background loop"""
-    loop = get_or_create_event_loop()
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
-    return future.result()
+# Store conversation history per session
+conversations = {}
 
 
 def allowed_file(filename):
@@ -68,15 +44,11 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def get_client(session_id):
-    """Get or create a client for this session"""
-    if session_id not in active_clients:
-        active_clients[session_id] = {
-            'client': None,
-            'conversation': [],
-            'created_at': datetime.now()
-        }
-    return active_clients[session_id]
+def get_conversation(session_id):
+    """Get or create conversation history for session"""
+    if session_id not in conversations:
+        conversations[session_id] = []
+    return conversations[session_id]
 
 
 @app.route('/')
@@ -94,17 +66,19 @@ def initialize():
             session['session_id'] = str(uuid.uuid4())
 
         session_id = session['session_id']
-        client_data = get_client(session_id)
 
         # Initialize client if not already done
-        if client_data['client'] is None:
-            async def init_client():
-                client = LangChainMCPClient(model_name="llama3.2")
-                await client.initialize()
-                return client
-
-            client = run_async(init_client())
-            client_data['client'] = client
+        if not client_manager.has_client(session_id):
+            try:
+                client_manager.initialize_client(session_id, model_name="llama3.2")
+            except Exception as e:
+                error_msg = str(e)
+                if "Connection" in error_msg or "refused" in error_msg:
+                    raise RuntimeError("❌ Ollama is not running. Please start Ollama first:\n\n1. Open a terminal\n2. Run: ollama serve\n3. Refresh this page")
+                elif "llama3.2" in error_msg or "model" in error_msg:
+                    raise RuntimeError("❌ Model 'llama3.2' not found. Please install it:\n\n1. Open a terminal\n2. Run: ollama pull llama3.2\n3. Wait for download to complete\n4. Refresh this page")
+                else:
+                    raise RuntimeError(f"❌ Initialization failed: {error_msg}")
 
         return jsonify({
             'status': 'success',
@@ -112,10 +86,15 @@ def initialize():
             'message': 'Client initialized successfully'
         })
 
-    except Exception as e:
+    except RuntimeError as e:
         return jsonify({
             'status': 'error',
             'message': str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f"❌ Initialization failed: {str(e)}"
         }), 500
 
 
@@ -137,60 +116,65 @@ def query():
             session['session_id'] = str(uuid.uuid4())
 
         session_id = session['session_id']
-        client_data = get_client(session_id)
 
         # Initialize if needed
-        if client_data['client'] is None:
-            async def init_client():
-                try:
-                    client = LangChainMCPClient(model_name="llama3.2")
-                    await client.initialize()
-                    return client
-                except Exception as e:
-                    error_msg = str(e)
-                    if "Connection" in error_msg or "refused" in error_msg:
-                        raise RuntimeError("❌ Ollama is not running. Please start Ollama first:\n\n1. Open a terminal\n2. Run: ollama serve\n3. Refresh this page")
-                    elif "llama3.2" in error_msg or "model" in error_msg:
-                        raise RuntimeError("❌ Model 'llama3.2' not found. Please install it:\n\n1. Open a terminal\n2. Run: ollama pull llama3.2\n3. Wait for download to complete\n4. Refresh this page")
-                    else:
-                        raise RuntimeError(f"❌ Initialization failed: {error_msg}")
-
+        if not client_manager.has_client(session_id):
             try:
-                client = run_async(init_client())
-                client_data['client'] = client
-            except RuntimeError as e:
-                return jsonify({
-                    'status': 'error',
-                    'message': str(e)
-                }), 500
-
-        # Process query
-        async def process():
-            try:
-                return await client_data['client'].process_query(user_query)
+                client_manager.initialize_client(session_id, model_name="llama3.2")
             except Exception as e:
                 error_msg = str(e)
-                if "Connection closed" in error_msg or "Connection" in error_msg:
-                    # Reset the client on connection error
-                    client_data['client'] = None
-                    raise RuntimeError("❌ Connection lost. Ollama may have stopped. Please:\n\n1. Check if Ollama is running: ollama serve\n2. Refresh the page\n3. Try your query again")
-                raise
+                if "Connection" in error_msg or "refused" in error_msg:
+                    return jsonify({
+                        'status': 'error',
+                        'message': "❌ Ollama is not running. Please start Ollama first:\n\n1. Open a terminal\n2. Run: ollama serve\n3. Refresh this page"
+                    }), 500
+                elif "llama3.2" in error_msg or "model" in error_msg:
+                    return jsonify({
+                        'status': 'error',
+                        'message': "❌ Model 'llama3.2' not found. Please install it:\n\n1. Open a terminal\n2. Run: ollama pull llama3.2\n3. Wait for download to complete\n4. Refresh this page"
+                    }), 500
+                else:
+                    return jsonify({
+                        'status': 'error',
+                        'message': f"❌ Initialization failed: {error_msg}"
+                    }), 500
 
+        # Process query using client manager
         try:
-            response = run_async(process())
-        except RuntimeError as e:
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 500
+            response = client_manager.query(session_id, user_query)
+        except Exception as e:
+            error_msg = str(e)
+            if "Connection closed" in error_msg or "Connection" in error_msg:
+                # Cleanup failed client
+                client_manager.cleanup_client(session_id)
+                return jsonify({
+                    'status': 'error',
+                    'message': "❌ Connection lost. Ollama may have stopped. Please:\n\n1. Check if Ollama is running: ollama serve\n2. Refresh the page\n3. Try your query again"
+                }), 500
+            elif "Connection" in error_msg or "refused" in error_msg:
+                return jsonify({
+                    'status': 'error',
+                    'message': "❌ Cannot connect to Ollama. Please start Ollama:\n\nRun: ollama serve"
+                }), 500
+            elif "model" in error_msg.lower():
+                return jsonify({
+                    'status': 'error',
+                    'message': "❌ Model not found. Please install llama3.2:\n\nRun: ollama pull llama3.2"
+                }), 500
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': f"❌ Query failed: {error_msg}"
+                }), 500
 
         # Store in conversation history
-        client_data['conversation'].append({
+        conversation = get_conversation(session_id)
+        conversation.append({
             'type': 'user',
             'message': user_query,
             'timestamp': datetime.now().isoformat()
         })
-        client_data['conversation'].append({
+        conversation.append({
             'type': 'assistant',
             'message': response,
             'timestamp': datetime.now().isoformat()
@@ -202,27 +186,15 @@ def query():
             'query': user_query
         })
 
-    except ConnectionError as e:
-        return jsonify({
-            'status': 'error',
-            'message': f"❌ Connection Error: {str(e)}\n\nPlease check:\n1. Ollama is running (ollama serve)\n2. Model is installed (ollama pull llama3.2)"
-        }), 500
     except Exception as e:
-        error_msg = str(e)
-        # Provide helpful error messages
-        if "Connection" in error_msg:
-            error_msg = "❌ Cannot connect to Ollama. Please start Ollama:\n\nRun: ollama serve"
-        elif "model" in error_msg.lower():
-            error_msg = "❌ Model not found. Please install llama3.2:\n\nRun: ollama pull llama3.2"
-
         return jsonify({
             'status': 'error',
-            'message': error_msg
+            'message': f"❌ Unexpected error: {str(e)}"
         }), 500
 
 
 @app.route('/api/conversation', methods=['GET'])
-def get_conversation():
+def get_conversation_history():
     """Get conversation history"""
     try:
         if 'session_id' not in session:
@@ -232,11 +204,11 @@ def get_conversation():
             })
 
         session_id = session['session_id']
-        client_data = get_client(session_id)
+        conversation = get_conversation(session_id)
 
         return jsonify({
             'status': 'success',
-            'conversation': client_data['conversation']
+            'conversation': conversation
         })
 
     except Exception as e:
@@ -252,8 +224,8 @@ def clear_conversation():
     try:
         if 'session_id' in session:
             session_id = session['session_id']
-            if session_id in active_clients:
-                active_clients[session_id]['conversation'] = []
+            if session_id in conversations:
+                conversations[session_id] = []
 
         return jsonify({
             'status': 'success',
