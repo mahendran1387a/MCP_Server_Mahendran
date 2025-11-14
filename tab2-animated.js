@@ -1,4 +1,4 @@
-// Tab 2: Animated Flowchart JavaScript
+// Tab 2: Animated Flowchart JavaScript - Updated for Current Architecture
 
 const queries2 = {
     calculator: {
@@ -8,293 +8,278 @@ const queries2 = {
         result: "Result: 100",
         answer: "The result is 100."
     },
-    weather: {
-        question: "What's the weather in Paris?",
-        tool: "weather",
-        args: {city: "Paris", units: "celsius"},
-        result: "20°C, Sunny",
-        answer: "Paris is 20°C and sunny."
+    rag: {
+        question: "What documents do I have about Python?",
+        tool: "rag_query",
+        args: {query: "Python", n_results: 3},
+        result: "Found 2 documents",
+        answer: "Found 2 documents about Python."
     },
     combined: {
-        question: "Calculate 50 + 30, and weather?",
+        question: "Calculate gold price + 5%?",
         tool: "calculator",
-        args: {operation: "add", a: 50, b: 30},
-        result: "80, Tokyo: 18°C",
-        answer: "50+30=80. Tokyo is 18°C."
+        args: {operation: "multiply", a: 2050, b: 1.05},
+        result: "$2,152.50",
+        answer: "New price: $2,152.50"
     }
 };
 
 let currentQuery2 = queries2.calculator;
 let currentStep2 = 0;
-let totalSteps2 = 12;
+let totalSteps2 = 14; // Browser->Web Server->AsyncManager->MCP Client->Ollama->MCP Server->Tools and back
 let isPlaying = false;
 let playbackSpeed = 1.0;
 let playInterval = null;
 
 const nodes = {
-    user: {x: 400, y: 50, label: "👤 User", width: 120, height: 60},
-    langchain: {x: 400, y: 180, label: "🔗 LangChain\nClient", width: 140, height: 70},
-    ollama: {x: 200, y: 350, label: "🧠 Ollama\nLLM", width: 130, height: 70},
-    mcpClient: {x: 600, y: 350, label: "🔌 MCP\nClient", width: 130, height: 70},
-    mcpServer: {x: 600, y: 520, label: "🛠️ MCP\nServer", width: 130, height: 70},
-    tools: {x: 600, y: 650, label: "⚙️ Tools", width: 120, height: 60}
+    browser: {x: 400, y: 50, label: "🌐 Browser", width: 130, height: 60},
+    webServer: {x: 400, y: 170, label: "⚡ Web Server\n(Flask)", width: 140, height: 70},
+    asyncManager: {x: 200, y: 310, label: "🔄 Async\nManager", width: 140, height: 70},
+    mcpClient: {x: 600, y: 310, label: "🔌 MCP\nClient", width: 130, height: 70},
+    ollama: {x: 200, y: 470, label: "🧠 Ollama\n(llama3.2)", width: 140, height: 70},
+    mcpServer: {x: 600, y: 470, label: "🛠️ MCP\nServer", width: 130, height: 70},
+    tools: {x: 600, y: 610, label: "⚙️ 8 Tools\n+ RAG API", width: 140, height: 70}
 };
 
 function getSteps2(query) {
     return [
         {
-            from: "user", to: "langchain",
-            message: {from: "User", to: "LangChain Client", content: query.question},
-            description: "User submits query"
+            from: "browser", to: "webServer",
+            message: {from: "Browser", to: "Web Server", content: `POST /api/query\n"${query.question}"`},
+            description: "Browser sends query to Flask server"
         },
         {
-            from: "langchain", to: "langchain",
-            message: {from: "LangChain", to: "Self", content: "Preparing system prompt with tool descriptions..."},
-            description: "Prepare context"
+            from: "webServer", to: "asyncManager",
+            message: {from: "Web Server", to: "AsyncClientManager", content: "Route query to MCP client"},
+            description: "Web server routes to AsyncClientManager"
         },
         {
-            from: "langchain", to: "ollama",
-            message: {from: "LangChain", to: "Ollama", content: `System: You have calculator and weather tools\nUser: ${query.question}`},
-            description: "Send to LLM"
+            from: "asyncManager", to: "mcpClient",
+            message: {from: "AsyncClientManager", to: "MCP Client", content: `process_query("${query.question}")`},
+            description: "Manager forwards to MCP client in background thread"
         },
         {
-            from: "ollama", to: "ollama",
-            message: {from: "Ollama", to: "Self", content: "Analyzing query... Need to use tool!"},
-            description: "LLM reasoning"
+            from: "mcpClient", to: "ollama",
+            message: {from: "MCP Client", to: "Ollama", content: `Query + System Prompt (8 tools)\n"${query.question}"`},
+            description: "Send question to Ollama LLM with tool descriptions"
         },
         {
-            from: "ollama", to: "langchain",
-            message: {from: "Ollama", to: "LangChain", content: `{"tool": "${query.tool}", "arguments": ${JSON.stringify(query.args)}}`},
-            description: "LLM decides tool"
-        },
-        {
-            from: "langchain", to: "langchain",
-            message: {from: "LangChain", to: "Self", content: `Extracted tool call: ${query.tool}`},
-            description: "Parse tool call"
-        },
-        {
-            from: "langchain", to: "mcpClient",
-            message: {from: "LangChain", to: "MCP Client", content: `call_tool("${query.tool}", ${JSON.stringify(query.args)})`},
-            description: "Request MCP tool"
+            from: "ollama", to: "mcpClient",
+            message: {from: "Ollama", to: "MCP Client", content: `{"tool": "${query.tool}", "arguments": {...}}`},
+            description: "Ollama decides to use a tool"
         },
         {
             from: "mcpClient", to: "mcpServer",
-            message: {from: "MCP Client", to: "MCP Server", content: `Execute: ${query.tool}(${JSON.stringify(query.args)})`},
-            description: "Forward to server"
+            message: {from: "MCP Client", to: "MCP Server", content: `call_tool("${query.tool}", ${JSON.stringify(query.args)})`},
+            description: "Call MCP server to execute tool"
         },
         {
             from: "mcpServer", to: "tools",
-            message: {from: "MCP Server", to: "Tools", content: `Run ${query.tool} with args`},
-            description: "Execute tool"
+            message: {from: "MCP Server", to: "Tools", content: `Execute: ${query.tool}\n${query.tool === 'rag_query' ? 'Via HTTP API → /api/rag/query' : 'Direct execution'}`},
+            description: query.tool === 'rag_query' ?
+                "RAG tool uses HTTP API (no DB locking!)" :
+                "Execute tool directly"
         },
         {
-            from: "tools", to: "langchain",
-            message: {from: "Tools", to: "LangChain", content: `Result: ${query.result}`},
-            description: "Return result"
+            from: "tools", to: "mcpServer",
+            message: {from: "Tools", to: "MCP Server", content: `Result: ${query.result}`},
+            description: "Tool returns result"
         },
         {
-            from: "langchain", to: "ollama",
-            message: {from: "LangChain", to: "Ollama", content: `Tool returned: ${query.result}`},
-            description: "Send result to LLM"
+            from: "mcpServer", to: "mcpClient",
+            message: {from: "MCP Server", to: "MCP Client", content: `TextContent: "${query.result}"`},
+            description: "MCP server returns result to client"
         },
         {
-            from: "ollama", to: "user",
-            message: {from: "Ollama", to: "User", content: query.answer},
-            description: "Final answer"
+            from: "mcpClient", to: "ollama",
+            message: {from: "MCP Client", to: "Ollama", content: `Tool returned: ${query.result}\nFormat final answer`},
+            description: "Send tool result back to Ollama for formatting"
+        },
+        {
+            from: "ollama", to: "mcpClient",
+            message: {from: "Ollama", to: "MCP Client", content: `"${query.answer}"`},
+            description: "Ollama generates natural language response"
+        },
+        {
+            from: "mcpClient", to: "asyncManager",
+            message: {from: "MCP Client", to: "AsyncClientManager", content: `Response: "${query.answer}"`},
+            description: "Return response to manager"
+        },
+        {
+            from: "asyncManager", to: "webServer",
+            message: {from: "AsyncClientManager", to: "Web Server", content: `{"response": "${query.answer}"}`},
+            description: "Manager returns to web server"
+        },
+        {
+            from: "webServer", to: "browser",
+            message: {from: "Web Server", to: "Browser", content: `JSON Response\n💬 AI: "${query.answer}"`},
+            description: "Web server sends response to browser"
         }
     ];
 }
 
-let steps2 = getSteps2(currentQuery2);
+// Initialize SVG flowchart
+let svg, width, height;
 
 function initFlowchart() {
-    const svg = document.getElementById('flowchart');
-    const svgNS = "http://www.w3.org/2000/svg";
+    const container = document.getElementById('flowchart');
+    width = container.parentElement.clientWidth;
+    height = 700;
 
-    svg.innerHTML = '';
+    // Clear existing
+    container.innerHTML = '';
 
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('id', 'flowchart');
+    container.appendChild(svg);
+
+    // Draw edges first (so they appear behind nodes)
+    drawEdges();
+
+    // Draw nodes
+    Object.entries(nodes).forEach(([id, node]) => {
+        drawNode(id, node);
+    });
+
+    // Reset step
+    currentStep2 = 0;
+    updateMessages();
+    updateProgress();
+}
+
+function drawNode(id, node) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'node');
+    g.setAttribute('data-id', id);
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('class', 'node-rect');
+    rect.setAttribute('x', node.x - node.width/2);
+    rect.setAttribute('y', node.y - node.height/2);
+    rect.setAttribute('width', node.width);
+    rect.setAttribute('height', node.height);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('class', 'node-text');
+    text.setAttribute('x', node.x);
+    text.setAttribute('y', node.y);
+
+    // Handle multiline text
+    const lines = node.label.split('\n');
+    lines.forEach((line, i) => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.setAttribute('x', node.x);
+        tspan.setAttribute('dy', i === 0 ? '0' : '1.2em');
+        tspan.textContent = line;
+        text.appendChild(tspan);
+    });
+
+    g.appendChild(rect);
+    g.appendChild(text);
+    svg.appendChild(g);
+}
+
+function drawEdges() {
     const edges = [
-        {from: 'user', to: 'langchain'},
-        {from: 'langchain', to: 'ollama'},
-        {from: 'langchain', to: 'mcpClient'},
+        {from: 'browser', to: 'webServer'},
+        {from: 'webServer', to: 'asyncManager'},
+        {from: 'webServer', to: 'mcpClient'},
+        {from: 'asyncManager', to: 'mcpClient'},
+        {from: 'mcpClient', to: 'ollama'},
         {from: 'mcpClient', to: 'mcpServer'},
-        {from: 'mcpServer', to: 'tools'},
+        {from: 'mcpServer', to: 'tools'}
     ];
 
-    const edgeGroup = document.createElementNS(svgNS, 'g');
-    edgeGroup.id = 'edges';
+    edges.forEach(edge => {
+        const fromNode = nodes[edge.from];
+        const toNode = nodes[edge.to];
 
-    edges.forEach((edge) => {
-        const from = nodes[edge.from];
-        const to = nodes[edge.to];
-
-        const path = document.createElementNS(svgNS, 'path');
-        const fromX = from.x;
-        const fromY = from.y + from.height;
-        const toX = to.x;
-        const toY = to.y;
-
-        const d = `M ${fromX} ${fromY} L ${toX} ${toY}`;
-        path.setAttribute('d', d);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('class', 'edge');
-        path.setAttribute('id', `edge-${edge.from}-${edge.to}`);
-        path.setAttribute('stroke-dasharray', '5,5');
+        path.setAttribute('data-from', edge.from);
+        path.setAttribute('data-to', edge.to);
 
-        edgeGroup.appendChild(path);
+        // Simple straight line
+        const d = `M ${fromNode.x} ${fromNode.y + fromNode.height/2} L ${toNode.x} ${toNode.y - toNode.height/2}`;
+        path.setAttribute('d', d);
+        path.setAttribute('stroke-dasharray', '10 5');
+
+        svg.appendChild(path);
     });
-
-    svg.appendChild(edgeGroup);
-
-    const nodeGroup = document.createElementNS(svgNS, 'g');
-    nodeGroup.id = 'nodes';
-
-    Object.entries(nodes).forEach(([id, node]) => {
-        const g = document.createElementNS(svgNS, 'g');
-        g.setAttribute('class', 'node');
-        g.setAttribute('id', `node-${id}`);
-
-        const rect = document.createElementNS(svgNS, 'rect');
-        rect.setAttribute('class', 'node-rect');
-        rect.setAttribute('x', node.x - node.width/2);
-        rect.setAttribute('y', node.y);
-        rect.setAttribute('width', node.width);
-        rect.setAttribute('height', node.height);
-
-        const text = document.createElementNS(svgNS, 'text');
-        text.setAttribute('class', 'node-text');
-        text.setAttribute('x', node.x);
-        text.setAttribute('y', node.y + node.height/2 + 5);
-
-        const lines = node.label.split('\n');
-        lines.forEach((line, i) => {
-            const tspan = document.createElementNS(svgNS, 'tspan');
-            tspan.textContent = line;
-            tspan.setAttribute('x', node.x);
-            tspan.setAttribute('dy', i === 0 ? 0 : '1.2em');
-            text.appendChild(tspan);
-        });
-
-        g.appendChild(rect);
-        g.appendChild(text);
-        nodeGroup.appendChild(g);
-    });
-
-    svg.appendChild(nodeGroup);
-
-    const packetGroup = document.createElementNS(svgNS, 'g');
-    packetGroup.id = 'packets';
-    svg.appendChild(packetGroup);
 }
 
-function animateStep(stepIndex) {
-    if (stepIndex >= steps2.length) return;
-
-    const step = steps2[stepIndex];
-
+function animateStep(step) {
+    // Clear all active states
     document.querySelectorAll('.node').forEach(n => n.classList.remove('active', 'pulsing'));
     document.querySelectorAll('.edge').forEach(e => e.classList.remove('active'));
-    document.querySelectorAll('.data-packet').forEach(p => p.remove());
+    document.querySelectorAll('.message').forEach(m => m.classList.remove('active'));
 
-    const fromNode = document.getElementById(`node-${step.from}`);
-    const toNode = document.getElementById(`node-${step.to}`);
+    if (step < 0 || step >= totalSteps2) return;
 
+    const steps = getSteps2(currentQuery2);
+    const currentStepData = steps[step];
+
+    // Activate from node
+    const fromNode = document.querySelector(`.node[data-id="${currentStepData.from}"]`);
     if (fromNode) fromNode.classList.add('active', 'pulsing');
 
-    setTimeout(() => {
-        if (fromNode) fromNode.classList.remove('pulsing');
+    // Activate to node
+    const toNode = document.querySelector(`.node[data-id="${currentStepData.to}"]`);
+    if (toNode) toNode.classList.add('active');
 
-        if (step.from !== step.to) {
-            animateDataPacket(step.from, step.to);
-
-            setTimeout(() => {
-                if (toNode) toNode.classList.add('active');
-            }, 500);
-        }
-    }, 300);
-
-    updateMessages(stepIndex);
-}
-
-function animateDataPacket(fromId, toId) {
-    const svgNS = "http://www.w3.org/2000/svg";
-    const packetGroup = document.getElementById('packets');
-
-    const from = nodes[fromId];
-    const to = nodes[toId];
-
-    if (!from || !to || fromId === toId) return;
-
-    const edgeId = `edge-${fromId}-${toId}`;
-    const edge = document.getElementById(edgeId);
+    // Activate edge
+    const edge = document.querySelector(`.edge[data-from="${currentStepData.from}"][data-to="${currentStepData.to}"]`);
     if (edge) edge.classList.add('active');
 
-    const packet = document.createElementNS(svgNS, 'circle');
-    packet.setAttribute('class', 'data-packet active');
-    packet.setAttribute('cx', from.x);
-    packet.setAttribute('cy', from.y + from.height);
+    // Activate message
+    const messageEl = document.querySelector(`.message[data-step="${step}"]`);
+    if (messageEl) messageEl.classList.add('active');
 
-    packetGroup.appendChild(packet);
-
-    const startX = from.x;
-    const startY = from.y + from.height;
-    const endX = to.x;
-    const endY = to.y;
-
-    const duration = 1000 / playbackSpeed;
-    const startTime = Date.now();
-
-    function animate() {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-
-        const currentX = startX + (endX - startX) * progress;
-        const currentY = startY + (endY - startY) * progress;
-
-        packet.setAttribute('cx', currentX);
-        packet.setAttribute('cy', currentY);
-
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        } else {
-            setTimeout(() => {
-                packet.remove();
-                if (edge) edge.classList.remove('active');
-            }, 200);
-        }
-    }
-
-    animate();
+    updateProgress();
 }
 
-function updateMessages(stepIndex) {
+function updateMessages() {
     const messageLog = document.getElementById('messageLog');
-    const messages = steps2.slice(0, stepIndex + 1).map((step, idx) => {
-        const isActive = idx === stepIndex;
-        return `
-            <div class="message ${isActive ? 'active' : ''}">
-                <div class="timestamp">Step ${idx + 1}</div>
-                <div class="from-to">${step.message.from} → ${step.message.to}</div>
-                <div class="content">${step.message.content}</div>
-            </div>
-        `;
-    });
+    const steps = getSteps2(currentQuery2);
 
-    messageLog.innerHTML = messages.join('');
-
-    const activeMsg = messageLog.querySelector('.message.active');
-    if (activeMsg) {
-        activeMsg.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-    }
+    messageLog.innerHTML = steps.map((step, i) => `
+        <div class="message ${i === currentStep2 ? 'active' : ''}" data-step="${i}">
+            <div class="timestamp">Step ${i + 1}/${steps.length}</div>
+            <div class="from-to">${step.message.from} → ${step.message.to}</div>
+            <div class="content">${step.message.content}</div>
+        </div>
+    `).join('');
 }
 
-function updateProgress2() {
+function updateProgress() {
     const progress = ((currentStep2 + 1) / totalSteps2) * 100;
     document.getElementById('progressFill2').style.width = progress + '%';
     document.getElementById('currentStep2').textContent = currentStep2 + 1;
+    document.getElementById('totalSteps2').textContent = totalSteps2;
+
+    document.getElementById('prevBtn2').disabled = currentStep2 === 0;
+    document.getElementById('nextBtn2').disabled = currentStep2 === totalSteps2 - 1;
 }
 
-function play() {
-    if (isPlaying) return;
+// Query selection
+document.querySelectorAll('.query-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+        document.querySelectorAll('.query-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+
+        const queryType = opt.dataset.query;
+        currentQuery2 = queries2[queryType];
+        currentStep2 = 0;
+        totalSteps2 = getSteps2(currentQuery2).length;
+        updateMessages();
+        animateStep(currentStep2);
+    });
+});
+
+// Playback controls
+document.getElementById('playBtn').addEventListener('click', () => {
     isPlaying = true;
     document.getElementById('playBtn').style.display = 'none';
     document.getElementById('pauseBtn').style.display = 'block';
@@ -303,112 +288,52 @@ function play() {
         if (currentStep2 < totalSteps2 - 1) {
             currentStep2++;
             animateStep(currentStep2);
-            updateProgress2();
         } else {
-            pause();
+            // Stop at end
+            isPlaying = false;
+            document.getElementById('playBtn').style.display = 'block';
+            document.getElementById('pauseBtn').style.display = 'none';
+            clearInterval(playInterval);
         }
     }, 2000 / playbackSpeed);
-}
+});
 
-function pause() {
+document.getElementById('pauseBtn').addEventListener('click', () => {
     isPlaying = false;
     document.getElementById('playBtn').style.display = 'block';
     document.getElementById('pauseBtn').style.display = 'none';
-    if (playInterval) {
-        clearInterval(playInterval);
-        playInterval = null;
-    }
-}
+    clearInterval(playInterval);
+});
 
-function next2() {
-    pause();
+document.getElementById('nextBtn2').addEventListener('click', () => {
     if (currentStep2 < totalSteps2 - 1) {
         currentStep2++;
         animateStep(currentStep2);
-        updateProgress2();
     }
-}
+});
 
-function prev2() {
-    pause();
+document.getElementById('prevBtn2').addEventListener('click', () => {
     if (currentStep2 > 0) {
         currentStep2--;
         animateStep(currentStep2);
-        updateProgress2();
     }
-}
+});
 
-function reset2() {
-    pause();
+document.getElementById('resetBtn2').addEventListener('click', () => {
     currentStep2 = 0;
     animateStep(currentStep2);
-    updateProgress2();
-}
+});
 
-// Event listeners for Tab 2
-document.getElementById('playBtn').addEventListener('click', play);
-document.getElementById('pauseBtn').addEventListener('click', pause);
-document.getElementById('nextBtn2').addEventListener('click', next2);
-document.getElementById('prevBtn2').addEventListener('click', prev2);
-document.getElementById('resetBtn2').addEventListener('click', reset2);
-
+// Speed control
 document.getElementById('speedSlider').addEventListener('input', (e) => {
     playbackSpeed = parseFloat(e.target.value);
     document.getElementById('speedValue').textContent = playbackSpeed.toFixed(1);
+});
 
-    if (isPlaying) {
-        pause();
-        play();
+// Initialize on load
+setTimeout(() => {
+    if (document.querySelector('.tab-content.active')?.id === 'animated') {
+        initFlowchart();
+        animateStep(currentStep2);
     }
-});
-
-document.querySelectorAll('.query-option').forEach(option => {
-    option.addEventListener('click', () => {
-        document.querySelectorAll('.query-option').forEach(o => o.classList.remove('selected'));
-        option.classList.add('selected');
-
-        const queryType = option.dataset.query;
-        currentQuery2 = queries2[queryType];
-        steps2 = getSteps2(currentQuery2);
-        totalSteps2 = steps2.length;
-        document.getElementById('totalSteps2').textContent = totalSteps2;
-
-        reset2();
-    });
-});
-
-document.getElementById('liveMode').addEventListener('click', () => {
-    document.getElementById('liveMode').classList.add('active');
-    document.getElementById('replayMode').classList.remove('active');
-    reset2();
-    play();
-});
-
-document.getElementById('replayMode').addEventListener('click', () => {
-    document.getElementById('replayMode').classList.add('active');
-    document.getElementById('liveMode').classList.remove('active');
-    pause();
-});
-
-// Keyboard shortcuts for Tab 2
-document.addEventListener('keydown', (e) => {
-    // Only handle if Tab 2 is active
-    if (!document.getElementById('animated').classList.contains('active')) return;
-
-    if (e.key === ' ') {
-        e.preventDefault();
-        if (isPlaying) pause();
-        else play();
-    } else if (e.key === 'ArrowRight') {
-        next2();
-    } else if (e.key === 'ArrowLeft') {
-        prev2();
-    } else if (e.key === 'r' || e.key === 'R') {
-        reset2();
-    }
-});
-
-// Initialize Tab 2
-initFlowchart();
-animateStep(currentStep2);
-updateProgress2();
+}, 100);
