@@ -3,12 +3,15 @@ LangChain + Ollama Client with MCP Tools Integration
 """
 import asyncio
 import json
+import logging
 from typing import Any, List
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool
+
+logger = logging.getLogger(__name__)
 
 
 class MCPToolWrapper:
@@ -50,39 +53,58 @@ class LangChainMCPClient:
 
     async def initialize(self):
         """Initialize the MCP connection and LangChain"""
-        # Connect to MCP server
-        server_params = StdioServerParameters(
-            command="python",
-            args=["mcp_server.py"],
-            env=None
-        )
+        try:
+            logger.info("Starting initialization...")
 
-        # Start MCP client session with proper context manager handling
-        self.stdio_context = stdio_client(server_params)
-        self.read_stream, self.write_stream = await self.stdio_context.__aenter__()
+            # Connect to MCP server
+            logger.info("Creating MCP server parameters...")
+            server_params = StdioServerParameters(
+                command="python",
+                args=["mcp_server.py"],
+                env=None
+            )
 
-        # Create the ClientSession with the streams
-        self.session = ClientSession(self.read_stream, self.write_stream)
-        await self.session.__aenter__()
+            # Start MCP client session with proper context manager handling
+            logger.info("Starting MCP client stdio connection...")
+            self.stdio_context = stdio_client(server_params)
+            self.read_stream, self.write_stream = await self.stdio_context.__aenter__()
+            logger.info("MCP stdio connection established")
 
-        # Initialize the session
-        await self.session.initialize()
+            # Create the ClientSession with the streams
+            logger.info("Creating ClientSession...")
+            self.session = ClientSession(self.read_stream, self.write_stream)
+            await self.session.__aenter__()
+            logger.info("ClientSession created")
 
-        # Initialize MCP wrapper
-        self.mcp_wrapper = MCPToolWrapper(self.session)
+            # Initialize the session
+            logger.info("Initializing session...")
+            await self.session.initialize()
+            logger.info("Session initialized")
 
-        # Initialize Ollama with LangChain
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=0,
-        )
+            # Initialize MCP wrapper
+            logger.info("Initializing MCP wrapper...")
+            self.mcp_wrapper = MCPToolWrapper(self.session)
 
-        print(f"✓ Initialized LangChain with Ollama model: {self.model_name}")
-        print(f"✓ Connected to MCP server")
+            # Initialize Ollama with LangChain
+            logger.info(f"Initializing Ollama LLM with model: {self.model_name}")
+            self.llm = ChatOllama(
+                model=self.model_name,
+                temperature=0,
+            )
+            logger.info("Ollama LLM initialized successfully")
 
-        # List available tools
-        tools = await self.mcp_wrapper.get_tools()
-        print(f"✓ Available tools: {', '.join(t.name for t in tools)}")
+            print(f"✓ Initialized LangChain with Ollama model: {self.model_name}")
+            print(f"✓ Connected to MCP server")
+
+            # List available tools
+            logger.info("Fetching available tools...")
+            tools = await self.mcp_wrapper.get_tools()
+            print(f"✓ Available tools: {', '.join(t.name for t in tools)}")
+            logger.info(f"Found {len(tools)} tools: {', '.join(t.name for t in tools)}")
+
+        except Exception as e:
+            logger.error(f"Initialization failed: {str(e)}", exc_info=True)
+            raise
 
     async def process_query(self, query: str) -> str:
         """Process a user query using LangChain + Ollama + MCP tools"""

@@ -15,6 +15,15 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from async_client_manager import get_client_manager
 from rag_system import get_rag_system, process_uploaded_file
+import logging
+import traceback
+
+# Configure detailed logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production'
@@ -57,6 +66,32 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/test/ollama', methods=['GET'])
+def test_ollama():
+    """Test Ollama connectivity"""
+    import aiohttp
+    import asyncio
+
+    async def check_ollama():
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get('http://localhost:11434/api/version', timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return {'status': 'success', 'message': 'Ollama is running', 'version': data}
+                    else:
+                        return {'status': 'error', 'message': f'Ollama returned status {response.status}'}
+        except aiohttp.ClientConnectorError as e:
+            return {'status': 'error', 'message': f'Connection refused: {str(e)}'}
+        except asyncio.TimeoutError:
+            return {'status': 'error', 'message': 'Connection timeout'}
+        except Exception as e:
+            return {'status': 'error', 'message': f'Error: {str(e)}'}
+
+    result = asyncio.run(check_ollama())
+    return jsonify(result)
+
+
 @app.route('/api/initialize', methods=['POST'])
 def initialize():
     """Initialize a new MCP client session"""
@@ -66,13 +101,19 @@ def initialize():
             session['session_id'] = str(uuid.uuid4())
 
         session_id = session['session_id']
+        logger.info(f"Initializing client for session: {session_id}")
 
         # Initialize client if not already done
         if not client_manager.has_client(session_id):
             try:
+                logger.info(f"Attempting to initialize client with model: llama3.2")
                 client_manager.initialize_client(session_id, model_name="llama3.2")
+                logger.info(f"Client initialized successfully for session: {session_id}")
             except Exception as e:
                 error_msg = str(e)
+                logger.error(f"Client initialization failed: {error_msg}")
+                logger.error(f"Full traceback: {traceback.format_exc()}")
+
                 if "Connection" in error_msg or "refused" in error_msg:
                     raise RuntimeError("❌ Ollama is not running. Please start Ollama first:\n\n1. Open a terminal\n2. Run: ollama serve\n3. Refresh this page")
                 elif "llama3.2" in error_msg or "model" in error_msg:
