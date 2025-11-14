@@ -108,6 +108,23 @@ http://localhost:5000
 
 ### Error: "Ollama is not running"
 
+**Solution 0:** Run the diagnostic script (BEST OPTION)
+```powershell
+# Activate virtual environment first
+.\venv\Scripts\Activate.ps1
+
+# Run the diagnostic
+python test_ollama.py
+```
+
+This will test:
+- ✅ Ollama API connectivity
+- ✅ llama3.2 model availability
+- ✅ Ollama generation capability
+- ✅ LangChain integration
+
+The script will tell you exactly what's wrong and how to fix it!
+
 **Solution 1:** Make sure Ollama is running
 ```powershell
 # In one PowerShell window
