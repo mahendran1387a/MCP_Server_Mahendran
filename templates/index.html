@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangChain + Ollama + MCP - Web Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .header-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #f8f9fa;
+            border-right: 2px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .tool-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .tool-card:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .tool-card h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .tool-card p {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+
+        .tool-example {
+            background: #f0f4ff;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            color: #667eea;
+            font-style: italic;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fafbfc;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            max-width: 80%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .message-content {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message-content .timestamp {
+            font-size: 0.75em;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content pre {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-input-container {
+            padding: 20px 30px;
+            background: white;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 15px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+            padding: 20px;
+            justify-content: center;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 50px 20px;
+            color: #666;
+        }
+
+        .welcome-message h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .welcome-message p {
+            margin-bottom: 10px;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .quick-action-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        .quick-action-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+            border-left: 4px solid #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>🤖</span>
+                LangChain + Ollama + MCP
+            </h1>
+            <div class="header-buttons">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Connected</span>
+                </div>
+                <button class="header-btn" onclick="clearConversation()">🗑️ Clear</button>
+                <button class="header-btn" onclick="window.open('/visualization.html', '_blank')">📊 Visualize</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>🛠️ Available Tools</h3>
+                <div id="toolsList"></div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <h2>👋 Welcome to the AI Agent!</h2>
+                        <p>I'm powered by LangChain + Ollama with 4 tools:</p>
+                        <p><strong>Calculator</strong> | <strong>Weather</strong> | <strong>Gold Price</strong> | <strong>Email</strong></p>
+
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" onclick="sendQuickQuery('What is 25 times 4?')">
+                                🔢 Calculate 25 × 4
+                            </button>
+                            <button class="quick-action-btn" onclick="sendQuickQuery('What is the weather in Paris?')">
+                                🌤️ Weather in Paris
+                            </button>
+                            <button class="quick-action-btn" onclick="sendQuickQuery('What is the current gold price?')">
+                                💰 Gold Price
+                            </button>
+                            <button class="quick-action-btn" onclick="sendQuickQuery('Send an email to john@example.com')">
+                                📧 Send Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <form class="chat-input-form" onsubmit="sendMessage(event)">
+                        <input
+                            type="text"
+                            class="chat-input"
+                            id="userInput"
+                            placeholder="Ask me anything... (e.g., 'What is the gold price in EUR?')"
+                            autocomplete="off"
+                        >
+                        <button type="submit" class="send-btn" id="sendBtn">
+                            Send 🚀
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isInitialized = false;
+        let isProcessing = false;
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            await initialize();
+            loadTools();
+        });
+
+        async function initialize() {
+            try {
+                const response = await fetch('/api/initialize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    isInitialized = true;
+                    console.log('Initialized successfully');
+                } else {
+                    showError('Failed to initialize: ' + data.message);
+                }
+            } catch (error) {
+                showError('Failed to initialize: ' + error.message);
+            }
+        }
+
+        async function loadTools() {
+            try {
+                const response = await fetch('/api/tools');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const toolsList = document.getElementById('toolsList');
+                    toolsList.innerHTML = data.tools.map(tool => `
+                        <div class="tool-card" onclick="sendQuickQuery('${tool.example}')">
+                            <h4>${tool.name}</h4>
+                            <p>${tool.description}</p>
+                            <div class="tool-example">Try: "${tool.example}"</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load tools:', error);
+            }
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+
+            if (isProcessing) return;
+
+            const input = document.getElementById('userInput');
+            const query = input.value.trim();
+
+            if (!query) return;
+
+            // Clear input
+            input.value = '';
+
+            // Add user message
+            addMessage('user', query);
+
+            // Show loading
+            showLoading();
+
+            // Disable input
+            isProcessing = true;
+            updateUIState();
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+
+                // Remove loading
+                removeLoading();
+
+                if (data.status === 'success') {
+                    addMessage('assistant', data.response);
+                } else {
+                    showError('Error: ' + data.message);
+                }
+            } catch (error) {
+                removeLoading();
+                showError('Failed to send message: ' + error.message);
+            } finally {
+                isProcessing = false;
+                updateUIState();
+            }
+        }
+
+        function sendQuickQuery(query) {
+            const input = document.getElementById('userInput');
+            input.value = query;
+            input.focus();
+        }
+
+        function addMessage(type, content) {
+            const messagesContainer = document.getElementById('chatMessages');
+
+            // Remove welcome message if it exists
+            const welcomeMsg = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+
+            const avatar = type === 'user' ? '👤' : '🤖';
+            const timestamp = new Date().toLocaleTimeString();
+
+            // Format content with code blocks
+            let formattedContent = content;
+            if (formattedContent.includes('```')) {
+                formattedContent = formattedContent.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div>${formattedContent.replace(/\n/g, '<br>')}</div>
+                    <div class="timestamp">${timestamp}</div>
+                </div>
+            `;
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showLoading() {
+            const messagesContainer = document.getElementById('chatMessages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.id = 'loadingIndicator';
+            loadingDiv.innerHTML = `
+                <div class="loading-spinner"></div>
+                <span>AI is thinking...</span>
+            `;
+            messagesContainer.appendChild(loadingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function removeLoading() {
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) {
+                loading.remove();
+            }
+        }
+
+        function showError(message) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            messagesContainer.appendChild(errorDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Remove after 5 seconds
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        function updateUIState() {
+            const sendBtn = document.getElementById('sendBtn');
+            const input = document.getElementById('userInput');
+
+            sendBtn.disabled = isProcessing;
+            input.disabled = isProcessing;
+            sendBtn.textContent = isProcessing ? 'Processing...' : 'Send 🚀';
+        }
+
+        async function clearConversation() {
+            if (!confirm('Clear all messages?')) return;
+
+            try {
+                const response = await fetch('/api/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const messagesContainer = document.getElementById('chatMessages');
+                    messagesContainer.innerHTML = `
+                        <div class="welcome-message">
+                            <h2>👋 Welcome to the AI Agent!</h2>
+                            <p>I'm powered by LangChain + Ollama with 4 tools:</p>
+                            <p><strong>Calculator</strong> | <strong>Weather</strong> | <strong>Gold Price</strong> | <strong>Email</strong></p>
+
+                            <div class="quick-actions">
+                                <button class="quick-action-btn" onclick="sendQuickQuery('What is 25 times 4?')">
+                                    🔢 Calculate 25 × 4
+                                </button>
+                                <button class="quick-action-btn" onclick="sendQuickQuery('What is the weather in Paris?')">
+                                    🌤️ Weather in Paris
+                                </button>
+                                <button class="quick-action-btn" onclick="sendQuickQuery('What is the current gold price?')">
+                                    💰 Gold Price
+                                </button>
+                                <button class="quick-action-btn" onclick="sendQuickQuery('Send an email to john@example.com')">
+                                    📧 Send Email
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                showError('Failed to clear conversation: ' + error.message);
+            }
+        }
+
+        // Allow Enter to send, Shift+Enter for new line
+        document.getElementById('userInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(e);
+            }
+        });
+    </script>
+</body>
+</html>
