@@ -305,7 +305,22 @@ function drawNode(id, node) {
 }
 
 function drawEdges() {
-    const edges = [
+    // Collect all unique edges from all possible query types
+    const allEdges = new Map();
+
+    // Add edges from all query types to ensure complete coverage
+    Object.values(queries2).forEach(query => {
+        const steps = getSteps2(query);
+        steps.forEach(step => {
+            const key = `${step.from}-${step.to}`;
+            if (!allEdges.has(key)) {
+                allEdges.set(key, {from: step.from, to: step.to});
+            }
+        });
+    });
+
+    // Static edges for visual structure
+    const staticEdges = [
         {from: 'browser', to: 'webServer'},
         {from: 'webServer', to: 'asyncManager'},
         {from: 'asyncManager', to: 'mcpClient'},
@@ -314,48 +329,16 @@ function drawEdges() {
         {from: 'ragSystem', to: 'chromadb'}
     ];
 
-    edges.forEach(edge => {
-        const fromNode = nodes[edge.from];
-        const toNode = nodes[edge.to];
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('class', 'edge');
-        path.setAttribute('data-from', edge.from);
-        path.setAttribute('data-to', edge.to);
-
-        // Calculate arrow path
-        const startY = fromNode.y + fromNode.height/2;
-        const endY = toNode.y - toNode.height/2;
-        const midY = (startY + endY) / 2;
-
-        // Draw arrow with marker
-        const d = `M ${fromNode.x} ${startY} L ${fromNode.x} ${midY} L ${toNode.x} ${midY} L ${toNode.x} ${endY}`;
-        path.setAttribute('d', d);
-        path.setAttribute('stroke-dasharray', '5 3');
-        path.setAttribute('marker-end', 'url(#arrowhead)');
-
-        // Special styling for HTTP edge
-        if (edge.style === 'http') {
-            path.setAttribute('stroke', '#2196F3');
-            path.setAttribute('stroke-width', '3');
-        }
-
-        svg.appendChild(path);
-
-        // Add label for special edges
-        if (edge.style === 'http') {
-            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            label.setAttribute('x', toNode.x + 40);
-            label.setAttribute('y', midY);
-            label.setAttribute('font-size', '11px');
-            label.setAttribute('fill', '#2196F3');
-            label.setAttribute('font-weight', 'bold');
-            label.textContent = 'HTTP (RAG only)';
-            svg.appendChild(label);
+    staticEdges.forEach(edge => {
+        const key = `${edge.from}-${edge.to}`;
+        if (!allEdges.has(key)) {
+            allEdges.set(key, edge);
+        } else if (edge.style) {
+            allEdges.get(key).style = edge.style;
         }
     });
 
-    // Add arrowhead marker definition
+    // Add arrowhead marker definition first
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
     marker.setAttribute('id', 'arrowhead');
@@ -372,6 +355,82 @@ function drawEdges() {
     marker.appendChild(polygon);
     defs.appendChild(marker);
     svg.insertBefore(defs, svg.firstChild);
+
+    // Draw all edges
+    allEdges.forEach(edge => {
+        const fromNode = nodes[edge.from];
+        const toNode = nodes[edge.to];
+
+        if (!fromNode || !toNode) return;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'edge');
+        path.setAttribute('data-from', edge.from);
+        path.setAttribute('data-to', edge.to);
+
+        let d;
+
+        // Handle self-loop (same node)
+        if (edge.from === edge.to) {
+            // Draw a loop on the right side of the node
+            const centerX = fromNode.x + fromNode.width/2;
+            const centerY = fromNode.y;
+            const loopSize = 40;
+            d = `M ${centerX} ${centerY - 20}
+                 C ${centerX + loopSize} ${centerY - 40},
+                   ${centerX + loopSize} ${centerY + 40},
+                   ${centerX} ${centerY + 20}`;
+        } else {
+            // Calculate arrow path for normal edges
+            const startY = fromNode.y + fromNode.height/2;
+            const endY = toNode.y - toNode.height/2;
+            const midY = (startY + endY) / 2;
+
+            // For return paths (going up), offset to the side to avoid overlap
+            if (startY > endY) {
+                const offset = 30;
+                d = `M ${fromNode.x + offset} ${startY}
+                     L ${fromNode.x + offset} ${midY}
+                     L ${toNode.x + offset} ${midY}
+                     L ${toNode.x + offset} ${endY}`;
+            } else {
+                d = `M ${fromNode.x} ${startY}
+                     L ${fromNode.x} ${midY}
+                     L ${toNode.x} ${midY}
+                     L ${toNode.x} ${endY}`;
+            }
+        }
+
+        path.setAttribute('d', d);
+        path.setAttribute('stroke-dasharray', '5 3');
+        path.setAttribute('marker-end', 'url(#arrowhead)');
+
+        // Special styling for HTTP edge
+        if (edge.style === 'http') {
+            path.setAttribute('stroke', '#2196F3');
+            path.setAttribute('stroke-width', '3');
+        }
+
+        svg.appendChild(path);
+
+        // Add label for special edges
+        if (edge.style === 'http' && edge.from !== edge.to) {
+            const fromNode = nodes[edge.from];
+            const toNode = nodes[edge.to];
+            const startY = fromNode.y + fromNode.height/2;
+            const endY = toNode.y - toNode.height/2;
+            const midY = (startY + endY) / 2;
+
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', toNode.x + 40);
+            label.setAttribute('y', midY);
+            label.setAttribute('font-size', '11px');
+            label.setAttribute('fill', '#2196F3');
+            label.setAttribute('font-weight', 'bold');
+            label.textContent = 'HTTP (RAG only)';
+            svg.appendChild(label);
+        }
+    });
 }
 
 function animateStep(step) {
@@ -389,17 +448,28 @@ function animateStep(step) {
     const fromNode = document.querySelector(`.node[data-id="${currentStepData.from}"]`);
     if (fromNode) fromNode.classList.add('active', 'pulsing');
 
-    // Activate to node
-    const toNode = document.querySelector(`.node[data-id="${currentStepData.to}"]`);
-    if (toNode) toNode.classList.add('active');
+    // Activate to node (don't duplicate if self-loop)
+    if (currentStepData.from !== currentStepData.to) {
+        const toNode = document.querySelector(`.node[data-id="${currentStepData.to}"]`);
+        if (toNode) toNode.classList.add('active');
+    }
 
     // Activate edge
     const edge = document.querySelector(`.edge[data-from="${currentStepData.from}"][data-to="${currentStepData.to}"]`);
-    if (edge) edge.classList.add('active');
+    if (edge) {
+        edge.classList.add('active');
+    } else {
+        // Edge might not be found, log for debugging
+        console.log(`Edge not found: ${currentStepData.from} -> ${currentStepData.to}`);
+    }
 
-    // Activate message
+    // Activate message and scroll into view
     const messageEl = document.querySelector(`.message[data-step="${step}"]`);
-    if (messageEl) messageEl.classList.add('active');
+    if (messageEl) {
+        messageEl.classList.add('active');
+        // Smooth scroll the message into view
+        messageEl.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
 
     updateProgress();
 }
