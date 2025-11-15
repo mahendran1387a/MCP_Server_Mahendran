@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 LangChain + Ollama + MCP - Ultimate Real-Time Flow Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #4c5fd5;
+            --secondary: #764ba2;
+            --success: #4CAF50;
+            --warning: #ff9800;
+            --error: #f44336;
+            --info: #2196F3;
+            --bg-dark: #1a1a2e;
+            --bg-light: #f8f9fa;
+            --text-dark: #333;
+            --text-light: #666;
+            --border: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1920px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        /* SCENARIO SELECTOR */
+        .scenario-bar {
+            background: var(--bg-light);
+            padding: 20px 30px;
+            border-bottom: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .scenario-bar label {
+            font-weight: bold;
+            color: var(--text-dark);
+            font-size: 1.1em;
+        }
+
+        .scenario-select {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            background: white;
+            min-width: 300px;
+        }
+
+        /* MAIN LAYOUT */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 120px 1fr 350px;
+            min-height: calc(100vh - 300px);
+        }
+
+        /* TIMELINE (LEFT) */
+        .timeline-panel {
+            background: #f0f4ff;
+            border-right: 3px solid var(--primary);
+            padding: 20px 10px;
+            position: relative;
+        }
+
+        .timeline {
+            position: relative;
+            height: 100%;
+        }
+
+        .timeline-track {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            transform: translateX(-50%);
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            text-align: center;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: var(--text-dark);
+            transition: all 0.3s;
+        }
+
+        .timeline-marker.active {
+            color: var(--primary);
+            font-size: 1.1em;
+            transform: translateX(-50%) scale(1.2);
+        }
+
+        .timeline-marker::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 3px solid var(--border);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .timeline-marker.active::before {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary);
+            width: 18px;
+            height: 18px;
+        }
+
+        .timeline-marker.completed::before {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        /* VISUALIZATION (CENTER) */
+        .visualization-panel {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+        }
+
+        .component-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .component-card {
+            background: white;
+            border: 3px solid var(--border);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+
+        .component-card.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #f0f4ff 0%, #fff 100%);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            opacity: 1;
+            transform: scale(1.02);
+        }
+
+        .component-card.completed {
+            opacity: 0.7;
+            border-color: var(--success);
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .component-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .component-card.active .component-icon {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3); }
+            50% { transform: scale(1.1); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6); }
+        }
+
+        .component-title {
+            flex: 1;
+        }
+
+        .component-title h3 {
+            font-size: 1.5em;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .component-title .component-subtitle {
+            color: var(--text-light);
+            font-size: 0.9em;
+        }
+
+        .component-status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-idle { background: #e0e0e0; color: #666; }
+        .status-active { background: var(--primary); color: white; animation: blink 1.5s infinite; }
+        .status-completed { background: var(--success); color: white; }
+        .status-error { background: var(--error); color: white; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* THOUGHT BUBBLE */
+        .thought-bubble {
+            background: linear-gradient(135deg, #fff3cd 0%, #fff9e6 100%);
+            border-left: 4px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .thought-bubble.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .thought-bubble h4 {
+            color: #856404;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+        }
+
+        .thought-line {
+            padding: 8px 0;
+            padding-left: 20px;
+            color: #856404;
+            line-height: 1.6;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s;
+        }
+
+        .thought-line.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* ACTION STEPS */
+        .action-steps {
+            background: #f8f9fa;
+            border-left: 4px solid var(--info);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .action-steps.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .action-steps h4 {
+            color: var(--info);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+        }
+
+        .step-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            border-left: 3px solid var(--border);
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.4s;
+        }
+
+        .step-item.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .step-item.completed {
+            border-left-color: var(--success);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .step-time {
+            background: var(--primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .step-check {
+            color: var(--success);
+            font-size: 1.2em;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .step-item.completed .step-check {
+            opacity: 1;
+        }
+
+        .step-content {
+            padding-left: 25px;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .step-substeps {
+            margin-top: 10px;
+            padding-left: 20px;
+            border-left: 2px dashed var(--border);
+        }
+
+        .substep {
+            padding: 5px 0;
+            font-size: 0.9em;
+            color: var(--text-light);
+        }
+
+        /* DATA BOX */
+        .data-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            margin: 10px 0;
+            overflow-x: auto;
+            border: 2px solid #333;
+        }
+
+        .data-box .json-key { color: #9cdcfe; }
+        .data-box .json-string { color: #ce9178; }
+        .data-box .json-number { color: #b5cea8; }
+        .data-box .json-boolean { color: #569cd6; }
+
+        /* ARROW CONNECTOR */
+        .flow-arrow {
+            text-align: center;
+            margin: -15px 0;
+            font-size: 2em;
+            color: var(--primary);
+            opacity: 0;
+            transition: all 0.5s;
+        }
+
+        .flow-arrow.visible {
+            opacity: 1;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* STATE PANEL (RIGHT) */
+        .state-panel {
+            background: var(--bg-light);
+            border-left: 3px solid var(--primary);
+            padding: 25px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+        }
+
+        .state-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .state-section h3 {
+            color: var(--text-dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: var(--text-light);
+            font-size: 0.9em;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        .metric-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        /* PACKET VISUALIZATION */
+        .packet-display {
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .packet-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .packet-icon {
+            width: 30px;
+            height: 30px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: packet-pulse 1.5s infinite;
+        }
+
+        @keyframes packet-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .packet-info {
+            font-size: 0.85em;
+            color: var(--text-light);
+        }
+
+        .packet-info-item {
+            padding: 5px 0;
+        }
+
+        /* CONTROL BAR (BOTTOM) */
+        .control-bar {
+            background: var(--bg-dark);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            border-top: 3px solid var(--primary);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-play { background: var(--success); color: white; }
+        .btn-pause { background: var(--warning); color: white; }
+        .btn-prev { background: var(--info); color: white; }
+        .btn-next { background: var(--info); color: white; }
+        .btn-reset { background: var(--error); color: white; }
+
+        .progress-container {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .progress-label {
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success) 0%, var(--primary) 100%);
+            transition: width 0.5s;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speed-label {
+            font-size: 0.9em;
+        }
+
+        .speed-slider {
+            width: 120px;
+        }
+
+        .step-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .step-current {
+            color: var(--primary);
+            font-size: 1.5em;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1400px) {
+            .main-layout {
+                grid-template-columns: 100px 1fr 300px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-panel {
+                display: none;
+            }
+
+            .state-panel {
+                border-left: none;
+                border-top: 3px solid var(--primary);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🚀 LangChain + Ollama + MCP</h1>
+            <p>Real-Time Educational Flow Visualization - See Every Component Think & Act</p>
+        </div>
+
+        <!-- SCENARIO SELECTOR -->
+        <div class="scenario-bar">
+            <label>📝 Select Scenario:</label>
+            <select class="scenario-select" id="scenarioSelect">
+                <option value="calculator" selected>Scenario 1: Simple Calculator - "What is 25 × 4?" (Basic Flow)</option>
+                <option value="weather">Scenario 2: Weather Query - "Weather in Paris?" (External API)</option>
+                <option value="combined">Scenario 3: Multi-Tool Chain - "50 + 30 and weather in Tokyo" (Parallel Execution)</option>
+            </select>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="main-layout">
+            <!-- TIMELINE (LEFT) -->
+            <div class="timeline-panel">
+                <div class="timeline">
+                    <div class="timeline-track"></div>
+                    <div id="timelineMarkers"></div>
+                </div>
+            </div>
+
+            <!-- VISUALIZATION (CENTER) -->
+            <div class="visualization-panel">
+                <div class="component-flow" id="componentFlow"></div>
+            </div>
+
+            <!-- STATE PANEL (RIGHT) -->
+            <div class="state-panel">
+                <div class="state-section">
+                    <h3>📊 Current Component State</h3>
+                    <div id="currentState"></div>
+                </div>
+
+                <div class="state-section">
+                    <h3>📦 Active Data Packet</h3>
+                    <div id="currentPacket"></div>
+                </div>
+
+                <div class="state-section">
+                    <h3>⏱️ Performance Metrics</h3>
+                    <div id="performanceMetrics"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROL BAR (BOTTOM) -->
+        <div class="control-bar">
+            <div class="control-group">
+                <button class="control-btn btn-play" id="playBtn">▶️ Play</button>
+                <button class="control-btn btn-pause" id="pauseBtn" style="display: none;">⏸️ Pause</button>
+                <button class="control-btn btn-prev" id="prevBtn">◀️ Prev</button>
+                <button class="control-btn btn-next" id="nextBtn">▶️ Next</button>
+                <button class="control-btn btn-reset" id="resetBtn">🔄 Reset</button>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-label">Progress</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="step-display">
+                Step <span class="step-current" id="stepCurrent">1</span> / <span id="stepTotal">11</span>
+            </div>
+
+            <div class="speed-control">
+                <span class="speed-label">Speed:</span>
+                <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="3" step="0.5" value="1">
+                <span class="speed-label" id="speedValue">1.0x</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // SCENARIO DATA - Complete specification for each scenario
+        // ============================================================================
+
+        const SCENARIOS = {
+            calculator: {
+                name: "Simple Calculator",
+                query: "What is 25 × 4?",
+                totalTime: 110,
+                steps: [
+                    {
+                        time: 0,
+                        component: "browser",
+                        title: "🌐 BROWSER",
+                        subtitle: "User Input Component",
+                        status: "active",
+                        thinks: [
+                            "User typed something and clicked Send",
+                            "Current state: session-abc123",
+                            "Query: 'What is 25 × 4?'",
+                            "Decision: This needs to go to the backend Flask server",
+                            "Action: Prepare HTTP POST request"
+                        ],
+                        does: [
+                            {
+                                time: 0,
+                                title: "Validate query is not empty",
+                                substeps: ["Query: 'What is 25 × 4?' ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 1,
+                                title: "Get current session_id from localStorage",
+                                substeps: ["session_id: 'session-abc123' ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 2,
+                                title: "Create payload object",
+                                data: {
+                                    query: "What is 25 × 4?",
+                                    session_id: "session-abc123",
+                                    timestamp: "2025-11-15T14:32:45.123Z",
+                                    user_id: "user-789"
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 3,
+                                title: "Send HTTP POST to: /api/query",
+                                substeps: ["Method: POST", "Endpoint: /api/query"],
+                                completed: true
+                            },
+                            {
+                                time: 4,
+                                title: "Show loading spinner (visual feedback)",
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "QUERY_REQUEST",
+                            size: "187 bytes",
+                            direction: "Browser → Flask",
+                            travelTime: "5ms"
+                        },
+                        state: {
+                            "Session ID": "session-abc123",
+                            "User ID": "user-789",
+                            "Loading": "Yes",
+                            "Send Button": "Disabled"
+                        }
+                    },
+                    {
+                        time: 5,
+                        component: "flask",
+                        title: "🚀 FLASK WEB SERVER",
+                        subtitle: "HTTP Request Handler",
+                        status: "active",
+                        thinks: [
+                            "HTTP POST request received on /api/query endpoint",
+                            "Status code: 200 OK (request valid)",
+                            "Session ID: session-abc123",
+                            "Decision: I need to route this to AsyncClientManager",
+                            "Decision: I need to look up this session",
+                            "Action: Validate session, then queue to AsyncClientManager"
+                        ],
+                        does: [
+                            {
+                                time: 5,
+                                title: "Receive HTTP POST",
+                                substeps: ["Endpoint: /api/query", "Method: POST"],
+                                completed: true
+                            },
+                            {
+                                time: 6,
+                                title: "Parse JSON payload",
+                                data: {
+                                    query: "What is 25 × 4?",
+                                    session_id: "session-abc123",
+                                    timestamp: "2025-11-15T14:32:45.123Z"
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 7,
+                                title: "Check session validity",
+                                substeps: [
+                                    "Look up session: 'session-abc123'",
+                                    "Session exists: YES ✓",
+                                    "Session expired: NO ✓",
+                                    "Session valid: YES ✓"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 8,
+                                title: "Prepare task for AsyncClientManager",
+                                data: {
+                                    task_id: "task-001-query",
+                                    session_id: "session-abc123",
+                                    query: "What is 25 × 4?"
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 9,
+                                title: "Enqueue task to AsyncClientManager",
+                                substeps: ["Queue depth: 0/100 ✓", "Task enqueued successfully"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "TASK_ENQUEUE",
+                            size: "212 bytes",
+                            direction: "Flask → AsyncClientManager",
+                            travelTime: "2ms"
+                        },
+                        state: {
+                            "Worker Pool": "1/4 active",
+                            "Queue Depth": "1/100",
+                            "Status": "Processing",
+                            "Response Code": "202 Accepted"
+                        }
+                    },
+                    {
+                        time: 10,
+                        component: "async",
+                        title: "⚙️ ASYNCCLIENTMANAGER",
+                        subtitle: "Background Event Loop",
+                        status: "active",
+                        thinks: [
+                            "New task arrived: task-001-query",
+                            "Current queue depth: 0 → 1/100",
+                            "Current active threads: 2/8",
+                            "Decision: I can process this task immediately",
+                            "Action: Put in queue, signal event loop to dequeue"
+                        ],
+                        does: [
+                            {
+                                time: 12,
+                                title: "Receive task from Flask",
+                                substeps: ["Task ID: task-001-query", "Query: 'What is 25 × 4?'"],
+                                completed: true
+                            },
+                            {
+                                time: 12,
+                                title: "Check queue capacity",
+                                substeps: ["Current depth: 0/100 ✓", "Free slots: 100"],
+                                completed: true
+                            },
+                            {
+                                time: 13,
+                                title: "ADD task to FIFO queue",
+                                substeps: ["Queue before: []", "Queue after: [task-001-query]"],
+                                completed: true
+                            },
+                            {
+                                time: 13,
+                                title: "EVENT LOOP checks queue",
+                                substeps: ["Queue empty: NO", "Workers available: YES (6/8)"],
+                                completed: true
+                            },
+                            {
+                                time: 14,
+                                title: "DEQUEUE task from queue",
+                                substeps: ["Task status: PROCESSING", "Active threads: 2 → 3/8"],
+                                completed: true
+                            },
+                            {
+                                time: 15,
+                                title: "CREATE coroutine",
+                                substeps: ["Method: run_coroutine_threadsafe()", "Target: langchain_query_async()"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "COROUTINE_SIGNAL",
+                            size: "245 bytes",
+                            direction: "AsyncClientManager → LangChain",
+                            travelTime: "1ms"
+                        },
+                        state: {
+                            "Queue Depth": "0/100",
+                            "Thread Pool": "3/8 (37.5%)",
+                            "Event Loop": "Running",
+                            "CPU Usage": "8%"
+                        }
+                    },
+                    {
+                        time: 18,
+                        component: "langchain",
+                        title: "🧠 LANGCHAIN CLIENT",
+                        subtitle: "Query Analysis Engine",
+                        status: "active",
+                        thinks: [
+                            "I received a query: 'What is 25 × 4?'",
+                            "I have 8 tools available",
+                            "Decision: Which tools do I need?",
+                            "Analysis: This is a math question → CALCULATOR needed",
+                            "Action: Call LLM to generate tool call JSON"
+                        ],
+                        does: [
+                            {
+                                time: 18,
+                                title: "Receive coroutine signal",
+                                substeps: ["Query: 'What is 25 × 4?'", "Tools available: 8"],
+                                completed: true
+                            },
+                            {
+                                time: 19,
+                                title: "BUILD system prompt",
+                                substeps: [
+                                    "Include 8 tool descriptions",
+                                    "Add instructions for tool selection"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 20,
+                                title: "FORMAT user message with query",
+                                substeps: ["User message: 'What is 25 × 4?'"],
+                                completed: true
+                            },
+                            {
+                                time: 21,
+                                title: "COMBINE system + user messages",
+                                substeps: ["Total input tokens: 12 tokens"],
+                                completed: true
+                            },
+                            {
+                                time: 22,
+                                title: "CALL LLM (Ollama - llama3.2)",
+                                substeps: [
+                                    "Model: llama3.2 (3B parameters)",
+                                    "Temperature: 0.0 (deterministic)",
+                                    "Endpoint: http://localhost:11434/api/generate"
+                                ],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "LLM_REQUEST",
+                            size: "1.2 KB",
+                            direction: "LangChain → Ollama",
+                            travelTime: "1ms"
+                        },
+                        state: {
+                            "Model": "llama3.2",
+                            "Temperature": "0.0",
+                            "Tokens Input": "12",
+                            "Context Window": "12/4096 (0.3%)"
+                        }
+                    },
+                    {
+                        time: 45,
+                        component: "llm",
+                        title: "🤖 LLM (Ollama/llama3.2)",
+                        subtitle: "AI Inference Engine",
+                        status: "active",
+                        thinks: [
+                            "Parse input: 'What is 25 × 4?'",
+                            "Recognize intent: User asking for arithmetic",
+                            "Scan available tools:",
+                            "  - calculator ✓ (matches arithmetic intent) [99% confidence]",
+                            "  - weather ✗ (no weather context)",
+                            "  - gold_price ✗ (no price context)",
+                            "Select tool: CALCULATOR (100% confidence)",
+                            "Extract parameters: operation=multiply, a=25, b=4"
+                        ],
+                        does: [
+                            {
+                                time: 45,
+                                title: "Process input tokens",
+                                substeps: ["Tokenize: 'What is 25 × 4?'", "Tokens: 12"],
+                                completed: true
+                            },
+                            {
+                                time: 46,
+                                title: "Analyze intent",
+                                substeps: ["Intent: Arithmetic calculation", "Confidence: 99%"],
+                                completed: true
+                            },
+                            {
+                                time: 47,
+                                title: "Match to tools",
+                                substeps: [
+                                    "calculator: 99% match ✓",
+                                    "weather: 0% match",
+                                    "Selected: calculator"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 48,
+                                title: "Extract parameters",
+                                data: {
+                                    tool: "calculator",
+                                    arguments: {
+                                        operation: "multiply",
+                                        a: 25,
+                                        b: 4
+                                    }
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 49,
+                                title: "Generate tool call JSON",
+                                substeps: ["Output tokens: 18", "Inference time: 23ms"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "TOOL_CALL",
+                            size: "156 bytes",
+                            direction: "LLM → MCP Server",
+                            travelTime: "2ms"
+                        },
+                        state: {
+                            "Tokens Input": "12",
+                            "Tokens Output": "18",
+                            "Total Tokens": "30/4096",
+                            "Inference Time": "23ms"
+                        }
+                    },
+                    {
+                        time: 50,
+                        component: "mcp",
+                        title: "🔧 MCP SERVER",
+                        subtitle: "Tool Router & Validator",
+                        status: "active",
+                        thinks: [
+                            "Tool call JSON received",
+                            "Tool name: calculator",
+                            "Decision: Route to calculator tool handler",
+                            "Decision: Validate parameters before execution",
+                            "Action: Execute tool and get result"
+                        ],
+                        does: [
+                            {
+                                time: 49,
+                                title: "RECEIVE tool call from LangChain",
+                                data: {
+                                    tool: "calculator",
+                                    arguments: {
+                                        operation: "multiply",
+                                        a: 25,
+                                        b: 4
+                                    }
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 50,
+                                title: "DESERIALIZE JSON",
+                                substeps: ["Parse JSON to Python dict ✓", "Deserialization time: 1ms"],
+                                completed: true
+                            },
+                            {
+                                time: 51,
+                                title: "VALIDATE tool exists",
+                                substeps: ["Tool 'calculator' registered: YES ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 52,
+                                title: "VALIDATE arguments",
+                                substeps: [
+                                    "operation: 'multiply' ✓",
+                                    "a: 25 (number) ✓",
+                                    "b: 4 (number) ✓"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 53,
+                                title: "ROUTE to calculator tool handler",
+                                substeps: ["Handler: tools.calculator.execute()"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "TOOL_EXECUTION_REQUEST",
+                            size: "98 bytes",
+                            direction: "MCP → Calculator Tool",
+                            travelTime: "1ms"
+                        },
+                        state: {
+                            "Tools Available": "8",
+                            "Current Tool": "calculator",
+                            "Status": "Routing",
+                            "Memory": "156 MB"
+                        }
+                    },
+                    {
+                        time: 54,
+                        component: "tool",
+                        title: "🔢 CALCULATOR TOOL",
+                        subtitle: "Arithmetic Operations",
+                        status: "active",
+                        thinks: [
+                            "I received: operation=multiply, a=25, b=4",
+                            "Decision: Perform multiplication",
+                            "Action: Calculate 25 × 4",
+                            "Action: Return result"
+                        ],
+                        does: [
+                            {
+                                time: 54,
+                                title: "RECEIVE parameters",
+                                substeps: ["operation: 'multiply'", "a: 25", "b: 4"],
+                                completed: true
+                            },
+                            {
+                                time: 55,
+                                title: "VALIDATE operation",
+                                substeps: ["Operation 'multiply' is valid ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 55,
+                                title: "CHECK parameters for safety",
+                                substeps: [
+                                    "a is numeric: YES (25) ✓",
+                                    "b is numeric: YES (4) ✓",
+                                    "Safe to compute ✓"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 56,
+                                title: "PERFORM calculation",
+                                substeps: ["Python: result = 25 * 4", "Result: 100"],
+                                completed: true
+                            },
+                            {
+                                time: 56,
+                                title: "FORMAT result JSON",
+                                data: {
+                                    result: 100,
+                                    operation: "multiply",
+                                    status: "success",
+                                    execution_time_ms: 2.3
+                                },
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "TOOL_RESULT",
+                            size: "89 bytes",
+                            direction: "Calculator → MCP Server",
+                            travelTime: "1ms"
+                        },
+                        state: {
+                            "Operation": "multiply",
+                            "Input A": "25",
+                            "Input B": "4",
+                            "Result": "100",
+                            "Execution Time": "2.3ms"
+                        }
+                    },
+                    {
+                        time: 58,
+                        component: "mcp",
+                        title: "🔧 MCP SERVER",
+                        subtitle: "Result Handler",
+                        status: "active",
+                        thinks: [
+                            "Tool returned result: 100",
+                            "Status: SUCCESS ✓",
+                            "Decision: Package result for LangChain",
+                            "Action: Send formatted result back"
+                        ],
+                        does: [
+                            {
+                                time: 58,
+                                title: "RECEIVE tool result",
+                                data: {
+                                    result: 100,
+                                    status: "success",
+                                    execution_time_ms: 2.3
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 59,
+                                title: "CHECK result status",
+                                substeps: ["Status: 'success' ✓", "No errors ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 60,
+                                title: "FORMAT response for LangChain",
+                                data: {
+                                    tool_call_id: "calculator-1",
+                                    tool_name: "calculator",
+                                    result: 100,
+                                    status: "success",
+                                    message: "Calculation successful: 25 × 4 = 100"
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 61,
+                                title: "SERIALIZE to JSON",
+                                substeps: ["Size: 234 bytes"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "TOOL_RESULT_RESPONSE",
+                            size: "234 bytes",
+                            direction: "MCP → LangChain",
+                            travelTime: "2ms"
+                        },
+                        state: {
+                            "Status": "Success",
+                            "Result": "100",
+                            "Response Size": "234 bytes"
+                        }
+                    },
+                    {
+                        time: 63,
+                        component: "langchain",
+                        title: "🧠 LANGCHAIN CLIENT",
+                        subtitle: "Answer Formatting",
+                        status: "active",
+                        thinks: [
+                            "Tool returned: 100",
+                            "User asked: 'What is 25 × 4?'",
+                            "Decision: Generate natural language answer",
+                            "Decision: Include all context in response",
+                            "Action: Format final response"
+                        ],
+                        does: [
+                            {
+                                time: 63,
+                                title: "RECEIVE tool result",
+                                data: {
+                                    tool_name: "calculator",
+                                    result: 100,
+                                    status: "success"
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 64,
+                                title: "BUILD message for LLM",
+                                substeps: [
+                                    "Original query: 'What is 25 × 4?'",
+                                    "Tool used: calculator",
+                                    "Tool result: 100"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 66,
+                                title: "CALL LLM to format answer",
+                                substeps: ["Model: llama3.2", "Task: Generate natural response"],
+                                completed: true
+                            },
+                            {
+                                time: 80,
+                                title: "RECEIVE LLM response",
+                                substeps: ["Answer: 'The answer is 100. 25 multiplied by 4 equals 100.'"],
+                                completed: true
+                            },
+                            {
+                                time: 81,
+                                title: "BUILD final response object",
+                                data: {
+                                    answer: "The answer is 100. 25 multiplied by 4 equals 100.",
+                                    tools_used: [{name: "calculator", result: 100}],
+                                    execution_time_ms: 81
+                                },
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "FINAL_RESPONSE",
+                            size: "412 bytes",
+                            direction: "LangChain → AsyncClientManager",
+                            travelTime: "1ms"
+                        },
+                        state: {
+                            "Answer Ready": "Yes",
+                            "Tools Used": "calculator",
+                            "Total Tokens": "30/4096",
+                            "Total Latency": "81ms"
+                        }
+                    },
+                    {
+                        time: 83,
+                        component: "async",
+                        title: "⚙️ ASYNCCLIENTMANAGER",
+                        subtitle: "Callback Handler",
+                        status: "active",
+                        thinks: [
+                            "Task task-001-query completed",
+                            "LangChain returned the final answer",
+                            "Decision: Put result in callback queue",
+                            "Decision: Signal Flask to retrieve",
+                            "Action: Mark task as complete"
+                        ],
+                        does: [
+                            {
+                                time: 83,
+                                title: "RECEIVE callback from LangChain",
+                                substeps: ["Task ID: task-001-query", "Status: complete"],
+                                completed: true
+                            },
+                            {
+                                time: 84,
+                                title: "STORE result in memory",
+                                substeps: ["Key: task-001-query", "TTL: 5 minutes"],
+                                completed: true
+                            },
+                            {
+                                time: 85,
+                                title: "UPDATE task status",
+                                substeps: ["Before: PROCESSING", "After: COMPLETE ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 86,
+                                title: "UPDATE thread pool state",
+                                substeps: ["Active threads: 3 → 2/8"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "CALLBACK_STORED",
+                            size: "412 bytes",
+                            direction: "AsyncClientManager → Flask",
+                            travelTime: "1ms"
+                        },
+                        state: {
+                            "Task Status": "COMPLETE",
+                            "Queue Depth": "0/100",
+                            "Thread Pool": "2/8 (25%)",
+                            "Results Available": "1"
+                        }
+                    },
+                    {
+                        time: 88,
+                        component: "flask",
+                        title: "🚀 FLASK WEB SERVER",
+                        subtitle: "Response Handler",
+                        status: "active",
+                        thinks: [
+                            "Result is ready from AsyncClientManager",
+                            "Decision: Format as HTTP response",
+                            "Decision: Set response headers",
+                            "Decision: Compress if needed",
+                            "Action: Send 200 OK with result"
+                        ],
+                        does: [
+                            {
+                                time: 88,
+                                title: "CHECK for result",
+                                substeps: ["Task ID: task-001-query", "Status: COMPLETE ✓"],
+                                completed: true
+                            },
+                            {
+                                time: 89,
+                                title: "RETRIEVE result from AsyncClientManager",
+                                substeps: ["Result retrieved successfully"],
+                                completed: true
+                            },
+                            {
+                                time: 90,
+                                title: "BUILD HTTP response body",
+                                data: {
+                                    status: "success",
+                                    answer: "The answer is 100. 25 multiplied by 4 equals 100.",
+                                    execution_time_ms: 81
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 91,
+                                title: "SET HTTP headers",
+                                substeps: [
+                                    "HTTP/1.1 200 OK",
+                                    "Content-Type: application/json",
+                                    "Content-Encoding: gzip"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 93,
+                                title: "SEND HTTP response",
+                                substeps: ["Status: 200 OK", "Body size: 231 bytes (gzipped)"],
+                                completed: true
+                            }
+                        ],
+                        packet: {
+                            type: "HTTP_RESPONSE",
+                            size: "231 bytes (compressed)",
+                            direction: "Flask → Browser",
+                            travelTime: "5ms"
+                        },
+                        state: {
+                            "Worker Pool": "0/4 active",
+                            "Response Status": "200 OK",
+                            "Compression": "gzip (44%)",
+                            "Ready": "Yes"
+                        }
+                    },
+                    {
+                        time: 99,
+                        component: "browser",
+                        title: "🌐 BROWSER",
+                        subtitle: "Response Display",
+                        status: "completed",
+                        thinks: [
+                            "HTTP response received (200 OK)",
+                            "Status: Success",
+                            "Decision: Parse JSON response",
+                            "Decision: Update UI with answer",
+                            "Action: Display answer to user"
+                        ],
+                        does: [
+                            {
+                                time: 99,
+                                title: "RECEIVE HTTP response",
+                                substeps: ["HTTP/1.1 200 OK", "Content-Type: application/json"],
+                                completed: true
+                            },
+                            {
+                                time: 100,
+                                title: "DECOMPRESS response",
+                                substeps: ["Decompressed size: 412 bytes"],
+                                completed: true
+                            },
+                            {
+                                time: 101,
+                                title: "PARSE JSON",
+                                data: {
+                                    status: "success",
+                                    answer: "The answer is 100. 25 multiplied by 4 equals 100.",
+                                    execution_time_ms: 81
+                                },
+                                completed: true
+                            },
+                            {
+                                time: 103,
+                                title: "UPDATE UI",
+                                substeps: [
+                                    "Hide loading spinner",
+                                    "Display answer text",
+                                    "Show tool badge: 🔢 Calculator",
+                                    "Show latency: ⏱️ 81ms",
+                                    "Enable send button"
+                                ],
+                                completed: true
+                            },
+                            {
+                                time: 110,
+                                title: "COMPLETE - Answer displayed",
+                                substeps: ["User sees: 'The answer is 100. 25 multiplied by 4 equals 100.'"],
+                                completed: true
+                            }
+                        ],
+                        packet: null,
+                        state: {
+                            "Display State": "Answer shown",
+                            "UI State": "Ready",
+                            "Total Time": "110ms",
+                            "Status": "✓ COMPLETE"
+                        }
+                    }
+                ]
+            }
+        };
+
+        // ============================================================================
+        // STATE MANAGEMENT
+        // ============================================================================
+
+        let currentScenario = 'calculator';
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playInterval = null;
+        let playbackSpeed = 1.0;
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+
+        function init() {
+            loadScenario(currentScenario);
+            setupEventListeners();
+            renderStep(0);
+        }
+
+        function loadScenario(scenarioKey) {
+            currentScenario = scenarioKey;
+            currentStepIndex = 0;
+            const scenario = SCENARIOS[scenarioKey];
+
+            // Update step total
+            document.getElementById('stepTotal').textContent = scenario.steps.length;
+
+            // Render timeline
+            renderTimeline(scenario);
+
+            // Render first step
+            renderStep(0);
+        }
+
+        function setupEventListeners() {
+            // Scenario selector
+            document.getElementById('scenarioSelect').addEventListener('change', (e) => {
+                stopPlayback();
+                loadScenario(e.target.value);
+            });
+
+            // Playback controls
+            document.getElementById('playBtn').addEventListener('click', startPlayback);
+            document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
+            document.getElementById('nextBtn').addEventListener('click', nextStep);
+            document.getElementById('prevBtn').addEventListener('click', prevStep);
+            document.getElementById('resetBtn').addEventListener('click', resetVisualization);
+
+            // Speed control
+            document.getElementById('speedSlider').addEventListener('input', (e) => {
+                playbackSpeed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = playbackSpeed.toFixed(1) + 'x';
+
+                // Restart playback with new speed if currently playing
+                if (isPlaying) {
+                    stopPlayback();
+                    startPlayback();
+                }
+            });
+        }
+
+        // ============================================================================
+        // TIMELINE RENDERING
+        // ============================================================================
+
+        function renderTimeline(scenario) {
+            const container = document.getElementById('timelineMarkers');
+            container.innerHTML = '';
+
+            const totalTime = scenario.totalTime;
+            const steps = scenario.steps;
+
+            steps.forEach((step, index) => {
+                const marker = document.createElement('div');
+                marker.className = 'timeline-marker';
+                marker.style.top = `${(step.time / totalTime) * 100}%`;
+                marker.textContent = `${step.time}ms`;
+                marker.dataset.index = index;
+
+                marker.addEventListener('click', () => {
+                    stopPlayback();
+                    renderStep(index);
+                });
+
+                container.appendChild(marker);
+            });
+        }
+
+        // ============================================================================
+        // STEP RENDERING
+        // ============================================================================
+
+        function renderStep(stepIndex) {
+            const scenario = SCENARIOS[currentScenario];
+            const steps = scenario.steps;
+
+            if (stepIndex < 0 || stepIndex >= steps.length) return;
+
+            currentStepIndex = stepIndex;
+            const step = steps[stepIndex];
+
+            // Update progress
+            const progress = ((stepIndex + 1) / steps.length) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('stepCurrent').textContent = stepIndex + 1;
+
+            // Update timeline markers
+            document.querySelectorAll('.timeline-marker').forEach((marker, idx) => {
+                marker.classList.remove('active', 'completed');
+                if (idx === stepIndex) {
+                    marker.classList.add('active');
+                } else if (idx < stepIndex) {
+                    marker.classList.add('completed');
+                }
+            });
+
+            // Render component
+            renderComponent(step);
+
+            // Render state panel
+            renderStatePanel(step);
+
+            // Update button states
+            updateButtonStates();
+        }
+
+        function renderComponent(step) {
+            const container = document.getElementById('componentFlow');
+
+            // Create component card
+            const card = document.createElement('div');
+            card.className = `component-card ${step.status}`;
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'component-header';
+            header.innerHTML = `
+                <div class="component-icon">${step.title.split(' ')[0]}</div>
+                <div class="component-title">
+                    <h3>${step.title}</h3>
+                    <div class="component-subtitle">${step.subtitle}</div>
+                </div>
+                <div class="component-status status-${step.status}">${step.status}</div>
+            `;
+            card.appendChild(header);
+
+            // Thought bubble
+            if (step.thinks && step.thinks.length > 0) {
+                const thoughtBubble = document.createElement('div');
+                thoughtBubble.className = 'thought-bubble';
+                thoughtBubble.innerHTML = '<h4>🧠 WHAT THIS COMPONENT THINKS:</h4>';
+
+                step.thinks.forEach((thought, idx) => {
+                    const line = document.createElement('div');
+                    line.className = 'thought-line';
+                    line.textContent = `├─ ${thought}`;
+                    thoughtBubble.appendChild(line);
+
+                    // Animate in sequence
+                    setTimeout(() => {
+                        line.classList.add('visible');
+                    }, idx * 100);
+                });
+
+                card.appendChild(thoughtBubble);
+                setTimeout(() => thoughtBubble.classList.add('visible'), 50);
+            }
+
+            // Action steps
+            if (step.does && step.does.length > 0) {
+                const actionSteps = document.createElement('div');
+                actionSteps.className = 'action-steps';
+                actionSteps.innerHTML = '<h4>⚙️ WHAT THIS COMPONENT DOES:</h4>';
+
+                step.does.forEach((action, idx) => {
+                    const stepItem = document.createElement('div');
+                    stepItem.className = `step-item ${action.completed ? 'completed' : ''}`;
+
+                    const stepHeader = document.createElement('div');
+                    stepHeader.className = 'step-header';
+                    stepHeader.innerHTML = `
+                        <span class="step-time">t=${action.time}ms</span>
+                        <span>${action.title}</span>
+                        <span class="step-check">✓</span>
+                    `;
+                    stepItem.appendChild(stepHeader);
+
+                    // Substeps
+                    if (action.substeps && action.substeps.length > 0) {
+                        const substeps = document.createElement('div');
+                        substeps.className = 'step-substeps';
+                        action.substeps.forEach(substep => {
+                            const sub = document.createElement('div');
+                            sub.className = 'substep';
+                            sub.textContent = `├─ ${substep}`;
+                            substeps.appendChild(sub);
+                        });
+                        stepItem.appendChild(substeps);
+                    }
+
+                    // Data
+                    if (action.data) {
+                        const dataBox = document.createElement('div');
+                        dataBox.className = 'data-box';
+                        dataBox.textContent = JSON.stringify(action.data, null, 2);
+                        stepItem.appendChild(dataBox);
+                    }
+
+                    actionSteps.appendChild(stepItem);
+
+                    // Animate in sequence
+                    setTimeout(() => {
+                        stepItem.classList.add('visible');
+                    }, idx * 150);
+                });
+
+                card.appendChild(actionSteps);
+                setTimeout(() => actionSteps.classList.add('visible'), 100);
+            }
+
+            // Packet info
+            if (step.packet) {
+                const packetDisplay = document.createElement('div');
+                packetDisplay.className = 'packet-display';
+                packetDisplay.innerHTML = `
+                    <div class="packet-header">
+                        <div class="packet-icon">📦</div>
+                        <span>PACKET CREATED</span>
+                    </div>
+                    <div class="packet-info">
+                        <div class="packet-info-item">├─ Type: ${step.packet.type}</div>
+                        <div class="packet-info-item">├─ Size: ${step.packet.size}</div>
+                        <div class="packet-info-item">├─ Direction: ${step.packet.direction}</div>
+                        <div class="packet-info-item">└─ Travel time: ${step.packet.travelTime}</div>
+                    </div>
+                `;
+                card.appendChild(packetDisplay);
+            }
+
+            // Clear and add
+            container.innerHTML = '';
+            container.appendChild(card);
+
+            // Animate card entrance
+            setTimeout(() => card.classList.add('active'), 50);
+        }
+
+        function renderStatePanel(step) {
+            // Current State
+            const stateContainer = document.getElementById('currentState');
+            if (step.state) {
+                stateContainer.innerHTML = '';
+                Object.entries(step.state).forEach(([key, value]) => {
+                    const metric = document.createElement('div');
+                    metric.className = 'metric-item';
+                    metric.innerHTML = `
+                        <span class="metric-label">${key}:</span>
+                        <span class="metric-value">${value}</span>
+                    `;
+                    stateContainer.appendChild(metric);
+                });
+            } else {
+                stateContainer.innerHTML = '<p style="color: #999;">No state data available</p>';
+            }
+
+            // Current Packet
+            const packetContainer = document.getElementById('currentPacket');
+            if (step.packet) {
+                packetContainer.innerHTML = `
+                    <div class="metric-item">
+                        <span class="metric-label">Type:</span>
+                        <span class="metric-value">${step.packet.type}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Size:</span>
+                        <span class="metric-value">${step.packet.size}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Direction:</span>
+                        <span class="metric-value">${step.packet.direction}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Travel:</span>
+                        <span class="metric-value">${step.packet.travelTime}</span>
+                    </div>
+                `;
+            } else {
+                packetContainer.innerHTML = '<p style="color: #999;">No packet in transit</p>';
+            }
+
+            // Performance Metrics
+            const metricsContainer = document.getElementById('performanceMetrics');
+            const scenario = SCENARIOS[currentScenario];
+            metricsContainer.innerHTML = `
+                <div class="metric-item">
+                    <span class="metric-label">Current Time:</span>
+                    <span class="metric-value">${step.time}ms</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Total Time:</span>
+                    <span class="metric-value">${scenario.totalTime}ms</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Progress:</span>
+                    <span class="metric-value">${Math.round((step.time / scenario.totalTime) * 100)}%</span>
+                </div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" style="width: ${(step.time / scenario.totalTime) * 100}%">
+                        ${Math.round((step.time / scenario.totalTime) * 100)}%
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================================================
+        // PLAYBACK CONTROLS
+        // ============================================================================
+
+        function startPlayback() {
+            isPlaying = true;
+            document.getElementById('playBtn').style.display = 'none';
+            document.getElementById('pauseBtn').style.display = 'flex';
+
+            const baseDelay = 2000; // 2 seconds per step
+            const delay = baseDelay / playbackSpeed;
+
+            playInterval = setInterval(() => {
+                if (currentStepIndex < SCENARIOS[currentScenario].steps.length - 1) {
+                    nextStep();
+                } else {
+                    stopPlayback();
+                }
+            }, delay);
+        }
+
+        function pausePlayback() {
+            stopPlayback();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            document.getElementById('playBtn').style.display = 'flex';
+            document.getElementById('pauseBtn').style.display = 'none';
+
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+
+        function nextStep() {
+            const scenario = SCENARIOS[currentScenario];
+            if (currentStepIndex < scenario.steps.length - 1) {
+                renderStep(currentStepIndex + 1);
+            }
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                renderStep(currentStepIndex - 1);
+            }
+        }
+
+        function resetVisualization() {
+            stopPlayback();
+            renderStep(0);
+        }
+
+        function updateButtonStates() {
+            const scenario = SCENARIOS[currentScenario];
+            document.getElementById('prevBtn').disabled = currentStepIndex === 0;
+            document.getElementById('nextBtn').disabled = currentStepIndex === scenario.steps.length - 1;
+        }
+
+        // ============================================================================
+        // START APPLICATION
+        // ============================================================================
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
