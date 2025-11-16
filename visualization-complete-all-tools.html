@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Complete Visualization - All 8 Tools & All Flows</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        /* Interactive Flow Styles */
+        .interactive-flow {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .visualization {
+            padding: 40px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .component {
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.5s;
+        }
+
+        .component.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transform: scale(1.02);
+        }
+
+        .component h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.4em;
+        }
+
+        .component-icon {
+            width: 35px;
+            height: 35px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .data-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .data-box.visible {
+            opacity: 1;
+        }
+
+        .explanation {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .explanation.visible {
+            opacity: 1;
+        }
+
+        .explanation h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .explanation p {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .explanation ul {
+            margin-left: 20px;
+            color: #856404;
+            line-height: 1.8;
+        }
+
+        .code-snippet {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .code-snippet.visible {
+            opacity: 1;
+        }
+
+        .arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            margin: -10px 0;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .arrow.visible {
+            opacity: 1;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .query-section {
+            margin-bottom: 30px;
+        }
+
+        .query-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .query-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .query-btn {
+            padding: 12px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .query-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .query-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .step-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn.next { background: #4CAF50; color: white; }
+        .control-btn.prev { background: #2196F3; color: white; }
+        .control-btn.reset { background: #f44336; color: white; }
+
+        .control-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .step-counter {
+            text-align: center;
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        .legend {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.85em;
+        }
+
+        .legend h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 1200px) {
+            .interactive-flow {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                border: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 MCP Complete Architecture Visualization</h1>
+            <p>All 8 Tools - All Decision Paths - All Scenarios (Techno-Managerial)</p>
+        </div>
+
+        <div class="interactive-flow">
+            <div class="controls">
+                <div class="query-section">
+                    <h3>🎯 View Mode</h3>
+                    <div class="mode-toggle">
+                        <button class="mode-btn active" id="managerMode">👔 Manager</button>
+                        <button class="mode-btn" id="techMode">⚙️ Technical</button>
+                    </div>
+                </div>
+
+                <div class="query-section">
+                    <h3>📝 Select Scenario</h3>
+                    <div class="query-buttons">
+                        <button class="query-btn active" data-scenario="calculator">
+                            🔢 Calculator: "25 × 4"
+                        </button>
+                        <button class="query-btn" data-scenario="weather">
+                            🌤️ Weather: "Paris forecast"
+                        </button>
+                        <button class="query-btn" data-scenario="gold">
+                            💰 Gold Price: "Current rate"
+                        </button>
+                        <button class="query-btn" data-scenario="multi">
+                            🔄 Multi-Tool: "50+30 & weather"
+                        </button>
+                        <button class="query-btn" data-scenario="rag">
+                            📚 RAG: "Search MCP docs"
+                        </button>
+                        <button class="query-btn" data-scenario="email">
+                            📧 Email: "Send report"
+                        </button>
+                        <button class="query-btn" data-scenario="code">
+                            💻 Code: "Run sum([1,2,3])"
+                        </button>
+                        <button class="query-btn" data-scenario="webscrape">
+                            🌐 Scraper: "Extract data"
+                        </button>
+                        <button class="query-btn" data-scenario="file">
+                            📁 File: "Read CSV"
+                        </button>
+                        <button class="query-btn" data-scenario="error">
+                            ❌ Error: "Invalid input"
+                        </button>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="step-counter">
+                    <div>Step <span id="currentStep">1</span> of <span id="totalSteps">9</span></div>
+                </div>
+
+                <div class="step-controls">
+                    <button class="control-btn next" id="nextBtn">Next Step ▶</button>
+                    <button class="control-btn prev" id="prevBtn">◀ Previous</button>
+                    <button class="control-btn reset" id="resetBtn">🔄 Reset</button>
+                </div>
+
+                <div class="legend">
+                    <h4>Legend</h4>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #667eea;"></div>
+                            <span>Active Component</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #4CAF50;"></div>
+                            <span>Data Flow</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ffc107;"></div>
+                            <span>Explanation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization" id="visualization"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // COMPLETE SCENARIO DATA - ALL 10 SCENARIOS WITH ALL 8 TOOLS
+        // ============================================================================
+
+        const SCENARIOS = {
+            calculator: {
+                name: 'Calculator',
+                query: 'What is 25 × 4?',
+                tool: 'calculator',
+                pathType: 'direct', // LangChain → MCP Direct → Tool
+                steps: 9,
+                result: '100',
+                manager: {
+                    description: 'Simple math calculation using the Calculator tool directly',
+                    businessValue: 'Fast, reliable calculations without AI overhead'
+                },
+                technical: {
+                    latency: '110ms',
+                    pathTaken: 'Direct (no LLM)',
+                    toolExecution: '2.3ms'
+                }
+            },
+            weather: {
+                name: 'Weather Query',
+                query: 'Weather in Paris?',
+                tool: 'weather',
+                pathType: 'ai', // LangChain → Ollama → MCP → Tool
+                steps: 10,
+                result: 'Sunny, 22°C',
+                manager: {
+                    description: 'AI analyzes query and calls Weather API for Paris forecast',
+                    businessValue: 'Natural language understanding - users don\'t need exact syntax'
+                },
+                technical: {
+                    latency: '450ms',
+                    pathTaken: 'AI (LLM decides)',
+                    toolExecution: '320ms (API call)'
+                }
+            },
+            gold: {
+                name: 'Gold Price',
+                query: 'Current gold price?',
+                tool: 'gold_price',
+                pathType: 'direct',
+                steps: 9,
+                result: '$2,050/oz',
+                manager: {
+                    description: 'Retrieves live gold market prices from financial API',
+                    businessValue: 'Real-time market data for investment decisions'
+                },
+                technical: {
+                    latency: '380ms',
+                    pathTaken: 'Direct',
+                    toolExecution: '280ms (API call)'
+                }
+            },
+            multi: {
+                name: 'Multi-Tool Chain',
+                query: '50 + 30 and weather in Tokyo',
+                tool: 'calculator + weather',
+                pathType: 'ai',
+                steps: 12,
+                result: '80, Rainy 18°C',
+                manager: {
+                    description: 'AI coordinates TWO tools in parallel: Calculator AND Weather',
+                    businessValue: 'Handles complex multi-part questions intelligently'
+                },
+                technical: {
+                    latency: '520ms',
+                    pathTaken: 'AI (parallel execution)',
+                    toolExecution: '2ms + 320ms'
+                }
+            },
+            rag: {
+                name: 'RAG Document Search',
+                query: 'Search docs for MCP protocol',
+                tool: 'rag_query',
+                pathType: 'ai',
+                steps: 10,
+                result: 'MCP protocol documentation found',
+                manager: {
+                    description: 'Searches through internal documents using AI-powered search',
+                    businessValue: 'Instant access to company knowledge base'
+                },
+                technical: {
+                    latency: '180ms',
+                    pathTaken: 'AI + Vector DB',
+                    toolExecution: '85ms (ChromaDB)'
+                }
+            },
+            email: {
+                name: 'Email Sender',
+                query: 'Send report to manager@company.com',
+                tool: 'email',
+                pathType: 'ai',
+                steps: 10,
+                result: 'Email sent successfully',
+                manager: {
+                    description: 'AI extracts email address and sends message via SMTP',
+                    businessValue: 'Automate email workflows with natural language'
+                },
+                technical: {
+                    latency: '650ms',
+                    pathTaken: 'AI (parameter extraction)',
+                    toolExecution: '450ms (SMTP)'
+                }
+            },
+            code: {
+                name: 'Code Executor',
+                query: 'Execute: sum([1, 2, 3])',
+                tool: 'code_executor',
+                pathType: 'ai',
+                steps: 10,
+                result: '6',
+                manager: {
+                    description: 'Runs Python code in a safe sandbox environment',
+                    businessValue: 'Dynamic calculations and data processing'
+                },
+                technical: {
+                    latency: '145ms',
+                    pathTaken: 'AI (code validation)',
+                    toolExecution: '45ms (sandbox)'
+                }
+            },
+            webscrape: {
+                name: 'Web Scraper',
+                query: 'Extract data from example.com',
+                tool: 'web_scraper',
+                pathType: 'ai',
+                steps: 10,
+                result: 'Data extracted successfully',
+                manager: {
+                    description: 'Fetches and parses data from websites automatically',
+                    businessValue: 'Automate data collection from web sources'
+                },
+                technical: {
+                    latency: '580ms',
+                    pathTaken: 'AI (URL validation)',
+                    toolExecution: '480ms (HTTP + parse)'
+                }
+            },
+            file: {
+                name: 'File Operations',
+                query: 'Read customer_data.csv',
+                tool: 'file_ops',
+                pathType: 'direct',
+                steps: 9,
+                result: 'File read successfully',
+                manager: {
+                    description: 'Reads files from the server filesystem',
+                    businessValue: 'Access to stored data and reports'
+                },
+                technical: {
+                    latency: '95ms',
+                    pathTaken: 'Direct',
+                    toolExecution: '12ms (file I/O)'
+                }
+            },
+            error: {
+                name: 'Error Handling',
+                query: 'asdfghjkl',
+                tool: 'none',
+                pathType: 'error',
+                steps: 6,
+                result: 'Invalid input error',
+                manager: {
+                    description: 'Gracefully handles invalid or unrecognized inputs',
+                    businessValue: 'User-friendly error messages prevent confusion'
+                },
+                technical: {
+                    latency: '45ms',
+                    pathTaken: 'Error path',
+                    toolExecution: '0ms (validation failed)'
+                }
+            }
+        };
+
+        // ============================================================================
+        // STATE
+        // ============================================================================
+
+        let currentScenario = 'calculator';
+        let currentStep = 0;
+        let currentMode = 'manager';
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+
+        function init() {
+            setupEventListeners();
+            renderStep();
+        }
+
+        function setupEventListeners() {
+            // Mode toggle
+            document.getElementById('managerMode').addEventListener('click', () => {
+                currentMode = 'manager';
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('managerMode').classList.add('active');
+                renderStep();
+            });
+
+            document.getElementById('techMode').addEventListener('click', () => {
+                currentMode = 'technical';
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('techMode').classList.add('active');
+                renderStep();
+            });
+
+            // Scenario selection
+            document.querySelectorAll('.query-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.query-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentScenario = btn.dataset.scenario;
+                    currentStep = 0;
+                    renderStep();
+                });
+            });
+
+            // Step controls
+            document.getElementById('nextBtn').addEventListener('click', nextStep);
+            document.getElementById('prevBtn').addEventListener('click', prevStep);
+            document.getElementById('resetBtn').addEventListener('click', resetFlow);
+        }
+
+        function nextStep() {
+            const scenario = SCENARIOS[currentScenario];
+            if (currentStep < scenario.steps - 1) {
+                currentStep++;
+                renderStep();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                renderStep();
+            }
+        }
+
+        function resetFlow() {
+            currentStep = 0;
+            renderStep();
+        }
+
+        // ============================================================================
+        // RENDER ENGINE
+        // ============================================================================
+
+        function renderStep() {
+            const scenario = SCENARIOS[currentScenario];
+
+            // Update progress
+            const progress = ((currentStep + 1) / scenario.steps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+
+            // Update step counter
+            document.getElementById('currentStep').textContent = currentStep + 1;
+            document.getElementById('totalSteps').textContent = scenario.steps;
+
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === scenario.steps - 1;
+
+            // Render visualization content
+            renderVisualization();
+        }
+
+        function renderVisualization() {
+            const container = document.getElementById('visualization');
+            container.innerHTML = '';
+
+            const scenario = SCENARIOS[currentScenario];
+            const isManager = currentMode === 'manager';
+
+            // Define all steps for this scenario
+            const steps = getStepsForScenario(scenario);
+
+            // Render up to current step
+            for (let i = 0; i <= currentStep; i++) {
+                const step = steps[i];
+
+                // Component box
+                const component = document.createElement('div');
+                component.className = 'component' + (i === currentStep ? ' active' : '');
+                component.innerHTML = `
+                    <h3>
+                        <div class="component-icon">${step.icon}</div>
+                        ${step.title}
+                    </h3>
+                `;
+
+                // Explanation (manager mode)
+                if (isManager && step.managerExplanation) {
+                    const explanation = document.createElement('div');
+                    explanation.className = 'explanation visible';
+                    explanation.innerHTML = `
+                        <h4>${step.managerExplanation.title}</h4>
+                        <p>${step.managerExplanation.content}</p>
+                    `;
+                    component.appendChild(explanation);
+                }
+
+                // Technical details
+                if (!isManager && step.technicalDetails) {
+                    const dataBox = document.createElement('div');
+                    dataBox.className = 'data-box visible';
+                    dataBox.textContent = step.technicalDetails;
+                    component.appendChild(dataBox);
+                }
+
+                // Code snippet
+                if (!isManager && step.code) {
+                    const codeSnippet = document.createElement('div');
+                    codeSnippet.className = 'code-snippet visible';
+                    codeSnippet.textContent = step.code;
+                    component.appendChild(codeSnippet);
+                }
+
+                container.appendChild(component);
+
+                // Arrow
+                if (i < currentStep) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'arrow visible';
+                    arrow.textContent = '↓';
+                    container.appendChild(arrow);
+                }
+            }
+
+            // Scroll to bottom
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+        }
+
+        // ============================================================================
+        // STEP DEFINITIONS FOR EACH SCENARIO
+        // ============================================================================
+
+        function getStepsForScenario(scenario) {
+            const baseSteps = [
+                {
+                    icon: '👤',
+                    title: 'USER',
+                    managerExplanation: {
+                        title: '👔 For Manager: User Input',
+                        content: `The user types their question: "${scenario.query}". This is the starting point of every interaction with our system.`
+                    },
+                    technicalDetails: `User Input:\nQuery: "${scenario.query}"\nSession: session-abc123\nUser ID: user-789`,
+                    code: `// Browser captures user input\nconst userQuery = "${scenario.query}";\nconst payload = {\n  query: userQuery,\n  session_id: "session-abc123",\n  timestamp: Date.now()\n};`
+                },
+                {
+                    icon: '🌐',
+                    title: 'BROWSER',
+                    managerExplanation: {
+                        title: '👔 For Manager: Web Interface',
+                        content: `The browser validates the input and sends it to our backend server. Think of it as the receptionist who receives requests and forwards them to the right department.`
+                    },
+                    technicalDetails: `HTTP POST Request:\nEndpoint: /api/query\nMethod: POST\nHeaders: Content-Type: application/json\nStatus: 200 OK`,
+                    code: `fetch('/api/query', {\n  method: 'POST',\n  headers: {'Content-Type': 'application/json'},\n  body: JSON.stringify(payload)\n});`
+                },
+                {
+                    icon: '🚀',
+                    title: 'FLASK API',
+                    managerExplanation: {
+                        title: '👔 For Manager: Backend Server',
+                        content: `Flask is our backend server. It checks if the user is authorized (session validation) and then queues the request for processing.`
+                    },
+                    technicalDetails: `Session Validation:\nSession exists: YES ✓\nSession expired: NO ✓\nWorker pool: 1/4 active\nQueue status: Enqueued successfully`,
+                    code: `@app.route('/api/query', methods=['POST'])\ndef query():\n    session_id = request.json['session_id']\n    if validate_session(session_id):\n        task_id = async_manager.enqueue(request.json)\n        return {'task_id': task_id}, 202`
+                },
+                {
+                    icon: '⚙️',
+                    title: 'ASYNC QUEUE',
+                    managerExplanation: {
+                        title: '👔 For Manager: Queue Manager',
+                        content: `The queue system manages multiple requests efficiently. It's like a line at a bank - ensures everyone gets served in order without overwhelming the system.`
+                    },
+                    technicalDetails: `Queue Status:\nCapacity: 1/100 (1%)\nThread Pool: 3/8 active (37.5%)\nEvent Loop: Running\nProcessing: Started`,
+                    code: `class AsyncClientManager:\n    def enqueue(self, task):\n        self.queue.put(task)\n        future = run_coroutine_threadsafe(\n            self.process(task),\n            self.loop\n        )\n        return future.result()`
+                },
+                {
+                    icon: '🧠',
+                    title: 'LANGCHAIN (Decision Maker)',
+                    managerExplanation: {
+                        title: '👔 For Manager: The Brain',
+                        content: `LangChain is the "brain" that decides how to answer. For "${scenario.query}", it chooses the ${scenario.pathType.toUpperCase()} path: ${
+                            scenario.pathType === 'direct' ? 'Go straight to the tool (faster)' :
+                            scenario.pathType === 'ai' ? 'Ask AI for help (smarter)' :
+                            'Return error (invalid input)'
+                        }.`
+                    },
+                    technicalDetails: `Decision Logic:\nQuery analyzed: "${scenario.query}"\nPath selected: ${scenario.pathType.toUpperCase()}\nTool identified: ${scenario.tool}\nConfidence: 99%`,
+                    code: `async def langchain_query_async(query):\n    # Analyze query\n    intent = analyze_intent(query)\n    \n    # Path: ${scenario.pathType}\n    if intent.is_simple:\n        return direct_tool_call()\n    else:\n        return await ask_llm_for_help()`
+                }
+            ];
+
+            // Add path-specific steps
+            if (scenario.pathType === 'ai') {
+                baseSteps.push({
+                    icon: '🤖',
+                    title: 'OLLAMA (AI/LLM)',
+                    managerExplanation: {
+                        title: '👔 For Manager: AI Assistant',
+                        content: `The AI (Ollama) reads the question and decides which tool to use. For "${scenario.query}", it selects the ${scenario.tool.toUpperCase()} tool with 99% confidence.`
+                    },
+                    technicalDetails: `LLM Inference:\nModel: llama3.2 (3B params)\nInput tokens: 12\nOutput tokens: 18\nInference time: 23ms\nTool selected: ${scenario.tool}\nConfidence: 99%`,
+                    code: `response = await ollama.generate(\n  model="llama3.2",\n  prompt="User asks: ${scenario.query}. Which tool?",\n  temperature=0.0\n)\n// Result: ${scenario.tool}`
+                });
+            }
+
+            baseSteps.push({
+                icon: '🔧',
+                title: 'MCP SERVER',
+                managerExplanation: {
+                    title: '👔 For Manager: Tool Manager',
+                    content: `MCP Server is like a toolbox manager. It finds the right tool (${scenario.tool}) and executes it with the correct parameters.`
+                },
+                technicalDetails: `Tool Routing:\nTool requested: ${scenario.tool}\nTool found: YES ✓\nParameters validated: YES ✓\nExecution started: ${scenario.technical.toolExecution}`,
+                code: `class MCPServer:\n    def call_tool(self, tool_name, args):\n        tool = self.tools['${scenario.tool}']\n        tool.validate(args)\n        result = tool.execute(args)\n        return result`
+            });
+
+            if (scenario.pathType !== 'error') {
+                baseSteps.push({
+                    icon: getToolIcon(scenario.tool),
+                    title: scenario.tool.toUpperCase().replace('_', ' ') + ' TOOL',
+                    managerExplanation: {
+                        title: `👔 For Manager: ${scenario.tool.replace('_', ' ')} Execution`,
+                        content: `The ${scenario.tool.replace('_', ' ')} tool performs the actual work: ${getToolDescription(scenario.tool, scenario.query)}. Result: ${scenario.result}`
+                    },
+                    technicalDetails: `Tool Execution:\nTool: ${scenario.tool}\nInput: "${scenario.query}"\nExecution time: ${scenario.technical.toolExecution}\nStatus: SUCCESS ✓\nResult: ${scenario.result}`,
+                    code: getToolCode(scenario.tool, scenario.query, scenario.result)
+                });
+
+                baseSteps.push({
+                    icon: '✅',
+                    title: 'RESULT',
+                    managerExplanation: {
+                        title: '👔 For Manager: Final Answer',
+                        content: `The system formats the result into a clear answer: "${scenario.result}". This is sent back to the browser and displayed to the user.`
+                    },
+                    technicalDetails: `Response Formatted:\nAnswer: "${scenario.result}"\nTotal time: ${scenario.technical.latency}\nPath taken: ${scenario.technical.pathTaken}\nStatus: 200 OK`,
+                    code: `{\n  "status": "success",\n  "query": "${scenario.query}",\n  "answer": "${scenario.result}",\n  "tool_used": "${scenario.tool}",\n  "execution_time": "${scenario.technical.latency}"\n}`
+                });
+
+                baseSteps.push({
+                    icon: '👤',
+                    title: 'USER SEES ANSWER',
+                    managerExplanation: {
+                        title: '👔 For Manager: Complete!',
+                        content: `The user sees the final answer: "${scenario.result}". Total time from question to answer: ${scenario.technical.latency}. Mission accomplished! ✓`
+                    },
+                    technicalDetails: `Browser Display:\nAnswer shown: "${scenario.result}"\nUI updated: YES ✓\nTotal roundtrip: ${scenario.technical.latency}\nUser satisfaction: ⭐⭐⭐⭐⭐`,
+                    code: `// Browser displays result\nconst result = await fetch('/api/query');\ndocument.getElementById('answer').textContent = "${scenario.result}";\n// User sees: "${scenario.result}"`
+                });
+            } else {
+                baseSteps.push({
+                    icon: '❌',
+                    title: 'ERROR HANDLER',
+                    managerExplanation: {
+                        title: '👔 For Manager: Error Handling',
+                        content: `The system detected invalid input: "${scenario.query}". Instead of crashing, it returns a helpful error message to the user.`
+                    },
+                    technicalDetails: `Error Handling:\nError type: ValidationError\nMessage: "Invalid input"\nHTTP Status: 400 Bad Request\nRecovery: Graceful`,
+                    code: `try:\n    process_query("${scenario.query}")\nexcept ValidationError:\n    return {\n        "error": "Invalid input",\n        "status": 400\n    }`
+                });
+            }
+
+            return baseSteps;
+        }
+
+        function getToolIcon(tool) {
+            const icons = {
+                calculator: '🔢',
+                weather: '🌤️',
+                gold_price: '💰',
+                email: '📧',
+                rag_query: '📚',
+                code_executor: '💻',
+                web_scraper: '🌐',
+                file_ops: '📁'
+            };
+            return icons[tool] || '🛠️';
+        }
+
+        function getToolDescription(tool, query) {
+            const descriptions = {
+                calculator: `performs the calculation from "${query}"`,
+                weather: `fetches weather data for the city in "${query}"`,
+                gold_price: 'retrieves current gold market prices from financial API',
+                email: `sends an email as requested in "${query}"`,
+                rag_query: `searches through documents for information about "${query}"`,
+                code_executor: `runs the Python code: ${query}`,
+                web_scraper: `extracts data from the URL specified`,
+                file_ops: `reads the file "${query}"`
+            };
+            return descriptions[tool] || 'executes the requested operation';
+        }
+
+        function getToolCode(tool, query, result) {
+            const codes = {
+                calculator: `class CalculatorTool:\n    def execute(self, operation, a, b):\n        if operation == 'multiply':\n            return a * b\n        # Result: ${result}`,
+                weather: `def get_weather(city):\n    response = weather_api.get(city)\n    return response.data\n    # Result: ${result}`,
+                gold_price: `def get_gold_price():\n    response = market_api.get('gold')\n    return response.price\n    # Result: ${result}`,
+                email: `def send_email(to, subject, body):\n    smtp.send(to, subject, body)\n    return "Email sent"\n    # Result: ${result}`,
+                rag_query: `def search_documents(query):\n    results = vector_db.search(query)\n    return results[0]\n    # Result: ${result}`,
+                code_executor: `def execute_code(code):\n    result = eval(code, safe_globals)\n    return result\n    # Result: ${result}`,
+                web_scraper: `def scrape_url(url):\n    html = requests.get(url).text\n    data = parse(html)\n    return data\n    # Result: ${result}`,
+                file_ops: `def read_file(filename):\n    with open(filename) as f:\n        data = f.read()\n    return data\n    # Result: ${result}`
+            };
+            return codes[tool] || `# Tool: ${tool}\n# Result: ${result}`;
+        }
+
+        // ============================================================================
+        // START
+        // ============================================================================
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
