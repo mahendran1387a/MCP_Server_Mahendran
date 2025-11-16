@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Architecture - Complete Flow Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        /* CONTROLS */
+        .controls-bar {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            background: transparent;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .scenario-select {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            min-width: 300px;
+        }
+
+        .step-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .step-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .step-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .step-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-prev { background: #2196F3; color: white; }
+        .btn-next { background: #4CAF50; color: white; }
+        .btn-reset { background: #f44336; color: white; }
+
+        .step-counter {
+            padding: 10px 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        /* FLOWCHART CANVAS */
+        .flowchart-container {
+            padding: 40px;
+            background: #fafbfc;
+            min-height: 800px;
+            position: relative;
+            overflow: visible;
+        }
+
+        /* NODES */
+        .node {
+            position: absolute;
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .node:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .node.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f4ff 0%, #fff 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+            transform: scale(1.08);
+        }
+
+        .node.completed {
+            border-color: #4CAF50;
+            opacity: 0.8;
+        }
+
+        .node.highlighted {
+            border-color: #ff9800;
+            animation: glow 1.5s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 152, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 152, 0, 0.8); }
+        }
+
+        .node-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .node-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .node-subtitle {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        /* ARROWS */
+        .arrow {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .arrow-line {
+            stroke: #999;
+            stroke-width: 3;
+            fill: none;
+            transition: all 0.3s;
+        }
+
+        .arrow-line.active {
+            stroke: #4CAF50;
+            stroke-width: 4;
+            animation: dash 1s linear infinite;
+        }
+
+        .arrow-line.highlighted {
+            stroke: #ff9800;
+            stroke-width: 4;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+
+        .arrow-head {
+            fill: #999;
+            transition: all 0.3s;
+        }
+
+        .arrow-head.active {
+            fill: #4CAF50;
+        }
+
+        .arrow-head.highlighted {
+            fill: #ff9800;
+        }
+
+        .arrow-label {
+            position: absolute;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: bold;
+            border: 2px solid #e0e0e0;
+            color: #666;
+        }
+
+        .arrow-label.active {
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .modal-header h2 {
+            flex: 1;
+            font-size: 1.8em;
+        }
+
+        .modal-close {
+            background: white;
+            color: #667eea;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            transform: rotate(90deg);
+            background: #f44336;
+            color: white;
+        }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-tab {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .modal-tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .info-section p {
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .example-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .example-item {
+            padding: 8px 0;
+            color: #333;
+        }
+
+        .example-item::before {
+            content: "▸ ";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .metric-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .metric-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .highlight-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .highlight-box strong {
+            color: #856404;
+        }
+
+        /* LEGEND */
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            border: 2px solid #667eea;
+            z-index: 100;
+        }
+
+        .legend h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .flowchart-container {
+                padding: 20px;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+            }
+
+            .scenario-select {
+                width: 100%;
+            }
+
+            .legend {
+                position: static;
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🚀 MCP Architecture - Complete Flow Visualization</h1>
+            <p>Interactive Techno-Managerial Flowchart - All Paths, All Tools, All Scenarios</p>
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="controls-bar">
+            <div class="mode-toggle">
+                <button class="mode-btn active" data-mode="manager">👔 Manager View</button>
+                <button class="mode-btn" data-mode="technical">⚙️ Technical View</button>
+            </div>
+
+            <select class="scenario-select" id="scenarioSelect">
+                <option value="calculator">1. Calculator: "What is 25 × 4?" (Simple Math)</option>
+                <option value="weather">2. Weather: "Weather in Paris?" (API Call)</option>
+                <option value="gold">3. Gold Price: "Current gold price?" (Market Data)</option>
+                <option value="multi">4. Multi-Tool: "50+30 and weather in Tokyo" (Parallel)</option>
+                <option value="rag">5. RAG Query: "Search docs for MCP" (Document Search)</option>
+                <option value="email">6. Email: "Send report to manager" (Action)</option>
+                <option value="code">7. Code: "Execute: sum([1,2,3])" (Code Run)</option>
+                <option value="webscrape">8. Web Scrape: "Get data from URL" (Web Extract)</option>
+                <option value="file">9. File Ops: "Read customer_data.csv" (File Access)</option>
+                <option value="error">10. Error: Invalid request handling (Error Flow)</option>
+            </select>
+
+            <div class="step-controls">
+                <button class="step-btn btn-prev" id="prevBtn">◀️ Prev</button>
+                <div class="step-counter">Step <span id="stepNum">1</span> of <span id="stepTotal">8</span></div>
+                <button class="step-btn btn-next" id="nextBtn">Next ▶️</button>
+                <button class="step-btn btn-reset" id="resetBtn">🔄 Reset</button>
+            </div>
+        </div>
+
+        <!-- FLOWCHART -->
+        <div class="flowchart-container" id="flowchart">
+            <!-- SVG for arrows -->
+            <svg style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none;" id="arrowsSVG">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#999" class="arrow-head"/>
+                    </marker>
+                    <marker id="arrowhead-active" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#4CAF50" class="arrow-head active"/>
+                    </marker>
+                    <marker id="arrowhead-highlighted" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#ff9800" class="arrow-head highlighted"/>
+                    </marker>
+                </defs>
+            </svg>
+
+            <!-- NODES -->
+            <!-- User -->
+            <div class="node" id="node-user" style="top: 20px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">👤</div>
+                <div class="node-title">USER</div>
+                <div class="node-subtitle">Asks Question</div>
+            </div>
+
+            <!-- Browser -->
+            <div class="node" id="node-browser" style="top: 140px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">🌐</div>
+                <div class="node-title">BROWSER</div>
+                <div class="node-subtitle">Web Interface</div>
+            </div>
+
+            <!-- Flask -->
+            <div class="node" id="node-flask" style="top: 260px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">🚀</div>
+                <div class="node-title">FLASK API</div>
+                <div class="node-subtitle">HTTP Server</div>
+            </div>
+
+            <!-- Async Queue -->
+            <div class="node" id="node-async" style="top: 380px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">⚙️</div>
+                <div class="node-title">ASYNC QUEUE</div>
+                <div class="node-subtitle">Event Loop</div>
+            </div>
+
+            <!-- LangChain (Decision Point) -->
+            <div class="node" id="node-langchain" style="top: 500px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">🧠</div>
+                <div class="node-title">LANGCHAIN</div>
+                <div class="node-subtitle">Decision Maker</div>
+            </div>
+
+            <!-- Path A: Ollama -->
+            <div class="node" id="node-ollama" style="top: 640px; left: 25%; transform: translateX(-50%);">
+                <div class="node-icon">🤖</div>
+                <div class="node-title">OLLAMA</div>
+                <div class="node-subtitle">AI (LLM)</div>
+            </div>
+
+            <!-- Path B: MCP Direct -->
+            <div class="node" id="node-mcp-direct" style="top: 640px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">🔧</div>
+                <div class="node-title">MCP SERVER</div>
+                <div class="node-subtitle">Direct Tools</div>
+            </div>
+
+            <!-- Path C: Error -->
+            <div class="node" id="node-error" style="top: 640px; left: 75%; transform: translateX(-50%);">
+                <div class="node-icon">❌</div>
+                <div class="node-title">ERROR</div>
+                <div class="node-subtitle">Error Handler</div>
+            </div>
+
+            <!-- MCP Server (from Ollama) -->
+            <div class="node" id="node-mcp" style="top: 760px; left: 25%; transform: translateX(-50%);">
+                <div class="node-icon">🔧</div>
+                <div class="node-title">MCP SERVER</div>
+                <div class="node-subtitle">Tool Router</div>
+            </div>
+
+            <!-- Tools Container -->
+            <div class="node" id="node-tools" style="top: 880px; left: 37.5%; transform: translateX(-50%); min-width: 600px;">
+                <div class="node-title" style="margin-bottom: 15px;">🛠️ ALL 8 TOOLS</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 0.9em;">
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>🔢</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">Calculator</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>🌤️</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">Weather</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>💰</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">Gold Price</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>📧</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">Email</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>📚</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">RAG Query</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>💻</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">Code Run</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>🌐</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">Web Scrape</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div>📁</div>
+                        <div style="font-weight: bold; font-size: 0.85em;">File Ops</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result -->
+            <div class="node" id="node-result" style="top: 1040px; left: 50%; transform: translateX(-50%);">
+                <div class="node-icon">✅</div>
+                <div class="node-title">RESULT</div>
+                <div class="node-subtitle">Answer Ready</div>
+            </div>
+
+            <!-- Arrow Labels -->
+            <div class="arrow-label" style="top: 610px; left: 35%;">PATH A: AI</div>
+            <div class="arrow-label" style="top: 610px; left: 48%;">PATH B: Direct</div>
+            <div class="arrow-label" style="top: 610px; left: 68%;">PATH C: Error</div>
+        </div>
+
+        <!-- LEGEND -->
+        <div class="legend">
+            <h4>🗺️ Legend</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #667eea;"></div>
+                <span>Active Step</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4CAF50;"></div>
+                <span>Completed</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff9800;"></div>
+                <span>Current Path</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e0e0e0;"></div>
+                <span>Inactive</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="node-icon" id="modalIcon"></div>
+                <h2 id="modalTitle"></h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="modal-tab active" data-tab="manager">👔 For Manager</button>
+                <button class="modal-tab" data-tab="technical">⚙️ For Engineers</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // DATA: ALL SCENARIOS WITH COMPLETE FLOWS
+        // ============================================================================
+
+        const COMPONENT_DATA = {
+            'user': {
+                icon: '👤',
+                title: 'USER',
+                manager: {
+                    what: 'The person using the application - could be an employee, customer, or end-user.',
+                    does: 'Types a question or request into the browser and waits for an answer.',
+                    examples: [
+                        'Employee asks: "What is 25 × 4?"',
+                        'Customer asks: "What\'s the weather in Paris?"',
+                        'Manager asks: "Send me the quarterly report"'
+                    ],
+                    value: 'The starting point of every interaction. User satisfaction is our ultimate goal.'
+                },
+                technical: {
+                    architecture: 'HTTP client (browser-based)',
+                    implementation: 'React/Vue frontend with Axios for API calls',
+                    flow: [
+                        '1. User types query in input field',
+                        '2. Frontend validates input (not empty)',
+                        '3. Creates HTTP POST request payload',
+                        '4. Sends to /api/query endpoint',
+                        '5. Waits for response with loading state'
+                    ],
+                    metrics: {
+                        'Avg Input Length': '15-50 characters',
+                        'Session Duration': '2-5 minutes',
+                        'Queries per Session': '3-7 queries'
+                    }
+                }
+            },
+
+            'browser': {
+                icon: '🌐',
+                title: 'BROWSER',
+                manager: {
+                    what: 'The web page or application interface where users interact with the system.',
+                    does: 'Receives the user\'s question, validates it, and sends it to the backend server for processing.',
+                    examples: [
+                        'Checks: Is the question empty? (validation)',
+                        'Adds: User ID and session information',
+                        'Sends: HTTP request to Flask server'
+                    ],
+                    value: 'Provides a user-friendly interface and handles all communication between user and server.'
+                },
+                technical: {
+                    architecture: 'SPA (Single Page Application) - React/Vue',
+                    implementation: 'Frontend framework with Axios/Fetch API',
+                    flow: [
+                        '1. Validate user input (client-side)',
+                        '2. Get session_id from localStorage',
+                        '3. Build JSON payload: {query, session_id, timestamp, user_id}',
+                        '4. POST to http://localhost:5000/api/query',
+                        '5. Handle response/error states'
+                    ],
+                    metrics: {
+                        'Response Time': '100-150ms',
+                        'Success Rate': '99.5%',
+                        'Network Latency': '5-10ms'
+                    },
+                    code: `// Browser sends request
+fetch('/api/query', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({
+    query: "What is 25 × 4?",
+    session_id: "session-abc123",
+    user_id: "user-789"
+  })
+})`
+                }
+            },
+
+            'flask': {
+                icon: '🚀',
+                title: 'FLASK API',
+                manager: {
+                    what: 'The backend web server that receives requests from the browser.',
+                    does: 'Acts as a gatekeeper - validates requests, checks user sessions, and routes queries to the processing queue.',
+                    examples: [
+                        'Validates: Is this a valid session?',
+                        'Checks: Is the user authenticated?',
+                        'Routes: Sends request to AsyncQueue for processing'
+                    ],
+                    value: 'Ensures security, handles multiple users simultaneously, and manages system resources efficiently.'
+                },
+                technical: {
+                    architecture: 'Python Flask REST API',
+                    implementation: 'Flask with Gunicorn, 4 worker processes',
+                    flow: [
+                        '1. Receive HTTP POST on /api/query',
+                        '2. Parse JSON payload',
+                        '3. Validate session_id exists in session_store',
+                        '4. Check session not expired (TTL: 30 min)',
+                        '5. Create task_id and enqueue to AsyncClientManager',
+                        '6. Return 202 Accepted with task_id'
+                    ],
+                    metrics: {
+                        'Worker Pool': '4 workers',
+                        'Max Connections': '100 concurrent',
+                        'Avg Response': '3ms',
+                        'Success Rate': '99.8%'
+                    },
+                    code: `@app.route('/api/query', methods=['POST'])
+def query():
+    data = request.json
+    session_id = data['session_id']
+
+    # Validate session
+    if not validate_session(session_id):
+        return {'error': 'Invalid session'}, 401
+
+    # Enqueue task
+    task_id = async_manager.enqueue(data)
+    return {'task_id': task_id, 'status': 'queued'}, 202`
+                }
+            },
+
+            'async': {
+                icon: '⚙️',
+                title: 'ASYNC QUEUE',
+                manager: {
+                    what: 'A smart queue system that manages multiple requests efficiently.',
+                    does: 'Like a traffic controller - receives requests from Flask, puts them in line, and processes them using available workers.',
+                    examples: [
+                        'Queue: Holds up to 100 requests at once',
+                        'Workers: Uses 8 worker threads to process requests',
+                        'Priority: Processes requests in order (FIFO)'
+                    ],
+                    value: 'Prevents system overload, ensures fair processing, and maintains high performance even under heavy load.'
+                },
+                technical: {
+                    architecture: 'AsyncIO Event Loop with Thread Pool',
+                    implementation: 'Python asyncio + concurrent.futures ThreadPoolExecutor',
+                    flow: [
+                        '1. Receive task from Flask',
+                        '2. Check queue capacity (max 100)',
+                        '3. Add to FIFO queue',
+                        '4. Event loop picks task when worker available',
+                        '5. Create coroutine: run_coroutine_threadsafe()',
+                        '6. Execute async langchain_query_async()',
+                        '7. Store result in callback dict'
+                    ],
+                    metrics: {
+                        'Queue Capacity': '100 tasks',
+                        'Thread Pool': '8 threads',
+                        'Avg Queue Time': '3ms',
+                        'Throughput': '500 req/sec'
+                    },
+                    code: `class AsyncClientManager:
+    def __init__(self):
+        self.queue = asyncio.Queue(maxsize=100)
+        self.executor = ThreadPoolExecutor(max_workers=8)
+        self.loop = asyncio.new_event_loop()
+
+    def enqueue(self, task):
+        future = run_coroutine_threadsafe(
+            self.process(task),
+            self.loop
+        )
+        return future`
+                }
+            },
+
+            'langchain': {
+                icon: '🧠',
+                title: 'LANGCHAIN',
+                manager: {
+                    what: 'The "brain" of the system - decides how to answer each question.',
+                    does: 'Analyzes the question and chooses the best path: Should I ask AI for help? Use a tool directly? Or handle an error?',
+                    examples: [
+                        'PATH A (AI): Complex questions → Ask Ollama',
+                        'PATH B (Direct): Simple requests → Use tool directly',
+                        'PATH C (Error): Invalid input → Return error'
+                    ],
+                    value: 'Smart routing means faster responses and better answers. Saves time and computing resources.'
+                },
+                technical: {
+                    architecture: 'LangChain with Ollama LLM integration',
+                    implementation: 'langchain-core v0.1.x + custom tool bindings',
+                    flow: [
+                        '1. Receive query from AsyncClientManager',
+                        '2. Build system prompt with 8 tool descriptions',
+                        '3. Decision logic:',
+                        '   - If query matches tool pattern → Direct (PATH B)',
+                        '   - If complex/ambiguous → LLM (PATH A)',
+                        '   - If invalid → Error (PATH C)',
+                        '4. For PATH A: Call Ollama for tool selection',
+                        '5. For PATH B: Direct tool call to MCP',
+                        '6. Parse results and format answer'
+                    ],
+                    metrics: {
+                        'Tools Available': '8',
+                        'LLM Latency': '20-30ms',
+                        'Direct Route': '60% of queries',
+                        'AI Route': '38% of queries',
+                        'Error Rate': '2%'
+                    },
+                    code: `async def langchain_query_async(query, client_mcp):
+    # Build prompt with tools
+    tools = get_all_tools()  # 8 tools
+    prompt = build_prompt(query, tools)
+
+    # Call LLM for decision
+    response = await ollama.generate(
+        model="llama3.2",
+        prompt=prompt,
+        temperature=0.0
+    )
+
+    # Parse tool call
+    tool_call = parse_tool_call(response)
+
+    # Execute via MCP
+    result = await mcp_client.call_tool(tool_call)
+
+    return format_answer(result)`
+                }
+            },
+
+            'ollama': {
+                icon: '🤖',
+                title: 'OLLAMA (AI)',
+                manager: {
+                    what: 'An AI assistant that understands questions and decides which tools to use.',
+                    does: 'Reads the question, thinks about it, and recommends the best tool for the job.',
+                    examples: [
+                        'Question: "What is 25 × 4?"',
+                        'AI thinks: "This is math → Use Calculator"',
+                        'Confidence: 99%',
+                        'Response: Use calculator with 25 and 4'
+                    ],
+                    value: 'Makes the system "smart" - can handle complex, ambiguous questions and learn from patterns.'
+                },
+                technical: {
+                    architecture: 'Ollama LLM Server (llama3.2 model)',
+                    implementation: 'Local LLM inference via HTTP API',
+                    flow: [
+                        '1. Receive prompt from LangChain',
+                        '2. Tokenize input (12-50 tokens typical)',
+                        '3. Load model: llama3.2 (3B parameters)',
+                        '4. Inference: Analyze query + scan tools',
+                        '5. Generate tool selection with confidence',
+                        '6. Output: JSON with tool name + arguments',
+                        '7. Return to LangChain (18-30 tokens output)'
+                    ],
+                    metrics: {
+                        'Model': 'llama3.2 (3B params)',
+                        'Context Window': '4096 tokens',
+                        'Inference Time': '20-30ms',
+                        'Accuracy': '99.2%',
+                        'Temperature': '0.0 (deterministic)'
+                    },
+                    code: `POST http://localhost:11434/api/generate
+{
+  "model": "llama3.2",
+  "prompt": "You have 8 tools. User asks: 'What is 25 × 4?'. Which tool?",
+  "temperature": 0.0
+}
+
+Response:
+{
+  "tool": "calculator",
+  "arguments": {
+    "operation": "multiply",
+    "a": 25,
+    "b": 4
+  },
+  "confidence": 0.99
+}`
+                }
+            },
+
+            'mcp': {
+                icon: '🔧',
+                title: 'MCP SERVER',
+                manager: {
+                    what: 'The tool manager - like a toolbox that contains all available tools.',
+                    does: 'Receives requests from LangChain or Ollama, finds the right tool, and executes it.',
+                    examples: [
+                        'Request: "Use calculator with 25 × 4"',
+                        'MCP: Finds calculator tool',
+                        'MCP: Validates parameters (25, 4)',
+                        'MCP: Executes → Result: 100'
+                    ],
+                    value: 'Centralized tool management means easy to add new tools, maintain existing ones, and ensure reliability.'
+                },
+                technical: {
+                    architecture: 'Python subprocess with JSON-RPC protocol',
+                    implementation: 'MCP protocol implementation with 8 registered tools',
+                    flow: [
+                        '1. Receive tool call from LangChain',
+                        '2. Deserialize JSON payload',
+                        '3. Validate tool exists in registry',
+                        '4. Validate arguments match tool schema',
+                        '5. Route to tool handler function',
+                        '6. Execute tool with error handling',
+                        '7. Format result as JSON',
+                        '8. Return to LangChain'
+                    ],
+                    metrics: {
+                        'Tools Registered': '8',
+                        'Avg Execution': '2-50ms',
+                        'Success Rate': '99.7%',
+                        'Memory Usage': '150MB',
+                        'Process ID': 'subprocess'
+                    },
+                    code: `class MCPServer:
+    def __init__(self):
+        self.tools = {
+            'calculator': CalculatorTool(),
+            'weather': WeatherTool(),
+            'gold_price': GoldPriceTool(),
+            # ... 5 more tools
+        }
+
+    def call_tool(self, tool_name, args):
+        if tool_name not in self.tools:
+            raise ToolNotFoundError()
+
+        tool = self.tools[tool_name]
+        tool.validate(args)
+        result = tool.execute(args)
+        return result`
+                }
+            },
+
+            'tools': {
+                icon: '🛠️',
+                title: 'TOOLS (8 Available)',
+                manager: {
+                    what: 'Specialized workers that perform specific tasks.',
+                    does: 'Each tool does one job very well. Calculator does math, Weather gets forecasts, etc.',
+                    examples: [
+                        '🔢 Calculator: Math operations (25 × 4 = 100)',
+                        '🌤️ Weather: Get forecasts for cities',
+                        '💰 Gold Price: Current market prices',
+                        '📧 Email: Send messages',
+                        '📚 RAG: Search documents',
+                        '💻 Code: Run Python code',
+                        '🌐 Scraper: Extract web data',
+                        '📁 Files: Read/write files'
+                    ],
+                    value: 'Modular design means we can add new tools easily, test them independently, and maintain quality.'
+                },
+                technical: {
+                    architecture: '8 independent Python modules with standardized interface',
+                    implementation: 'Each tool inherits from BaseTool class',
+                    tools: [
+                        {
+                            name: 'Calculator',
+                            ops: ['add', 'subtract', 'multiply', 'divide'],
+                            latency: '1-3ms',
+                            success: '100%'
+                        },
+                        {
+                            name: 'Weather',
+                            api: 'OpenWeatherMap API',
+                            latency: '50-200ms',
+                            success: '99.5%'
+                        },
+                        {
+                            name: 'Gold Price',
+                            api: 'Metal Prices API',
+                            latency: '100-300ms',
+                            success: '99.8%'
+                        },
+                        {
+                            name: 'Email',
+                            protocol: 'SMTP',
+                            latency: '200-500ms',
+                            success: '99.9%'
+                        },
+                        {
+                            name: 'RAG Query',
+                            db: 'ChromaDB (vector)',
+                            latency: '50-150ms',
+                            success: '99.7%'
+                        },
+                        {
+                            name: 'Code Executor',
+                            runtime: 'Sandboxed Python',
+                            latency: '10-100ms',
+                            success: '98.5%'
+                        },
+                        {
+                            name: 'Web Scraper',
+                            lib: 'BeautifulSoup4',
+                            latency: '100-500ms',
+                            success: '97.5%'
+                        },
+                        {
+                            name: 'File Ops',
+                            storage: 'Local filesystem',
+                            latency: '5-20ms',
+                            success: '99.9%'
+                        }
+                    ],
+                    code: `class CalculatorTool(BaseTool):
+    def validate(self, args):
+        assert 'operation' in args
+        assert 'a' in args and 'b' in args
+        assert args['operation'] in ['add', 'subtract', 'multiply', 'divide']
+
+    def execute(self, args):
+        a, b = args['a'], args['b']
+        op = args['operation']
+
+        if op == 'multiply':
+            return {'result': a * b, 'status': 'success'}
+        # ... other operations`
+                }
+            },
+
+            'result': {
+                icon: '✅',
+                title: 'RESULT',
+                manager: {
+                    what: 'The final answer formatted in a user-friendly way.',
+                    does: 'Takes the raw tool output and formats it into natural language that users can understand.',
+                    examples: [
+                        'Raw: {result: 100}',
+                        'Formatted: "The answer is 100. 25 multiplied by 4 equals 100."',
+                        'Includes: Tool used, execution time, success status'
+                    ],
+                    value: 'Users get clear, natural answers instead of technical data. Improves user experience and satisfaction.'
+                },
+                technical: {
+                    architecture: 'Response formatter + JSON serializer',
+                    implementation: 'LangChain formats result, Flask serves HTTP response',
+                    flow: [
+                        '1. LangChain receives tool result',
+                        '2. Generate natural language response (via LLM)',
+                        '3. Build response object with metadata',
+                        '4. AsyncClientManager stores in callback dict',
+                        '5. Flask retrieves result',
+                        '6. Compress with gzip (40-50% reduction)',
+                        '7. Send HTTP 200 OK to browser',
+                        '8. Browser displays to user'
+                    ],
+                    metrics: {
+                        'Format Time': '5-15ms',
+                        'Compression': '40-50% (gzip)',
+                        'Total Latency': '100-200ms',
+                        'User Satisfaction': '4.8/5'
+                    },
+                    code: `{
+  "status": "success",
+  "query": "What is 25 × 4?",
+  "answer": "The answer is 100. 25 multiplied by 4 equals 100.",
+  "tools_used": [{
+    "name": "calculator",
+    "operation": "multiply",
+    "result": 100,
+    "execution_time_ms": 2.3
+  }],
+  "total_time_ms": 110,
+  "timestamp": "2025-11-15T14:32:45.560Z"
+}`
+                }
+            },
+
+            'error': {
+                icon: '❌',
+                title: 'ERROR HANDLER',
+                manager: {
+                    what: 'Catches problems and returns helpful error messages.',
+                    does: 'When something goes wrong (invalid input, timeout, etc.), this handles it gracefully.',
+                    examples: [
+                        'Invalid session → "Please log in again"',
+                        'Timeout → "Request took too long, please retry"',
+                        'Tool error → "Calculator is temporarily unavailable"'
+                    ],
+                    value: 'Prevents crashes, provides clear error messages, and logs issues for debugging.'
+                },
+                technical: {
+                    architecture: 'Multi-layer error handling',
+                    implementation: 'Try-catch blocks at each layer + error logging',
+                    errorTypes: [
+                        'ValidationError: Invalid input parameters',
+                        'AuthenticationError: Invalid session',
+                        'TimeoutError: Request exceeded 30s',
+                        'ToolError: Tool execution failed',
+                        'NetworkError: API call failed',
+                        'SystemError: Internal server error'
+                    ],
+                    flow: [
+                        '1. Error caught at layer (Flask/Async/LangChain/MCP)',
+                        '2. Error classified by type',
+                        '3. Log error with context (user_id, query, stack trace)',
+                        '4. Format user-friendly message',
+                        '5. Return appropriate HTTP status (400/401/500)',
+                        '6. Optional: Retry logic for transient errors'
+                    ],
+                    metrics: {
+                        'Error Rate': '2% overall',
+                        'Most Common': 'ValidationError (60%)',
+                        'Avg Recovery': '< 1s',
+                        'Logged': '100% to file'
+                    },
+                    code: `try:
+    result = await process_query(query)
+except ValidationError as e:
+    return {'error': 'Invalid input', 'details': str(e)}, 400
+except TimeoutError:
+    return {'error': 'Request timeout', 'retry': True}, 504
+except Exception as e:
+    logger.error(f"Unexpected error: {e}", exc_info=True)
+    return {'error': 'Internal error'}, 500`
+                }
+            }
+        };
+
+        // ============================================================================
+        // SCENARIOS
+        // ============================================================================
+
+        const SCENARIOS = {
+            calculator: {
+                name: 'Calculator',
+                query: 'What is 25 × 4?',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'mcp-direct', 'tools', 'result'],
+                pathType: 'direct',
+                tool: 'calculator',
+                result: '100'
+            },
+            weather: {
+                name: 'Weather',
+                query: 'Weather in Paris?',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'ollama', 'mcp', 'tools', 'result'],
+                pathType: 'ai',
+                tool: 'weather',
+                result: 'Sunny, 22°C'
+            },
+            gold: {
+                name: 'Gold Price',
+                query: 'Current gold price?',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'mcp-direct', 'tools', 'result'],
+                pathType: 'direct',
+                tool: 'gold_price',
+                result: '$2,050/oz'
+            },
+            multi: {
+                name: 'Multi-Tool',
+                query: '50+30 and weather in Tokyo',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'ollama', 'mcp', 'tools', 'result'],
+                pathType: 'ai',
+                tool: 'calculator + weather',
+                result: '80, Rainy 18°C'
+            },
+            rag: {
+                name: 'RAG Query',
+                query: 'Search docs for MCP',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'ollama', 'mcp', 'tools', 'result'],
+                pathType: 'ai',
+                tool: 'rag_query',
+                result: 'MCP documentation found'
+            },
+            email: {
+                name: 'Email',
+                query: 'Send report to manager',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'ollama', 'mcp', 'tools', 'result'],
+                pathType: 'ai',
+                tool: 'email',
+                result: 'Email sent successfully'
+            },
+            code: {
+                name: 'Code Executor',
+                query: 'Execute: sum([1,2,3])',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'ollama', 'mcp', 'tools', 'result'],
+                pathType: 'ai',
+                tool: 'code_executor',
+                result: '6'
+            },
+            webscrape: {
+                name: 'Web Scraper',
+                query: 'Get data from URL',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'ollama', 'mcp', 'tools', 'result'],
+                pathType: 'ai',
+                tool: 'web_scraper',
+                result: 'Data extracted'
+            },
+            file: {
+                name: 'File Operations',
+                query: 'Read customer_data.csv',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'mcp-direct', 'tools', 'result'],
+                pathType: 'direct',
+                tool: 'file_ops',
+                result: 'File read successfully'
+            },
+            error: {
+                name: 'Error Handling',
+                query: 'asdfghjkl',
+                path: ['user', 'browser', 'flask', 'async', 'langchain', 'error'],
+                pathType: 'error',
+                tool: 'none',
+                result: 'Invalid input'
+            }
+        };
+
+        // ============================================================================
+        // STATE
+        // ============================================================================
+
+        let currentScenario = 'calculator';
+        let currentStep = 0;
+        let currentMode = 'manager';
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+
+        function init() {
+            setupEventListeners();
+            drawArrows();
+            loadScenario(currentScenario);
+        }
+
+        function setupEventListeners() {
+            // Mode toggle
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentMode = btn.dataset.mode;
+                });
+            });
+
+            // Modal tabs
+            document.querySelectorAll('.modal-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    document.getElementById(tab.dataset.tab + '-content').classList.add('active');
+                });
+            });
+
+            // Scenario selector
+            document.getElementById('scenarioSelect').addEventListener('change', (e) => {
+                loadScenario(e.target.value);
+            });
+
+            // Step controls
+            document.getElementById('nextBtn').addEventListener('click', nextStep);
+            document.getElementById('prevBtn').addEventListener('click', prevStep);
+            document.getElementById('resetBtn').addEventListener('click', resetFlow);
+
+            // Node clicks
+            document.querySelectorAll('.node').forEach(node => {
+                node.addEventListener('click', () => {
+                    const nodeId = node.id.replace('node-', '');
+                    openModal(nodeId);
+                });
+            });
+
+            // Modal close
+            document.getElementById('modal').addEventListener('click', (e) => {
+                if (e.target.id === 'modal') closeModal();
+            });
+        }
+
+        function drawArrows() {
+            const svg = document.getElementById('arrowsSVG');
+            const arrows = [
+                {from: 'user', to: 'browser'},
+                {from: 'browser', to: 'flask'},
+                {from: 'flask', to: 'async'},
+                {from: 'async', to: 'langchain'},
+                {from: 'langchain', to: 'ollama', label: 'AI'},
+                {from: 'langchain', to: 'mcp-direct', label: 'Direct'},
+                {from: 'langchain', to: 'error', label: 'Error'},
+                {from: 'ollama', to: 'mcp'},
+                {from: 'mcp', to: 'tools'},
+                {from: 'mcp-direct', to: 'tools'},
+                {from: 'tools', to: 'result'}
+            ];
+
+            arrows.forEach(arrow => {
+                const fromNode = document.getElementById('node-' + arrow.from);
+                const toNode = document.getElementById('node-' + arrow.to);
+
+                if (!fromNode || !toNode) return;
+
+                const fromRect = fromNode.getBoundingClientRect();
+                const toRect = toNode.getBoundingClientRect();
+                const containerRect = document.getElementById('flowchart').getBoundingClientRect();
+
+                const x1 = fromRect.left + fromRect.width / 2 - containerRect.left;
+                const y1 = fromRect.bottom - containerRect.top;
+                const x2 = toRect.left + toRect.width / 2 - containerRect.left;
+                const y2 = toRect.top - containerRect.top;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+                path.setAttribute('class', 'arrow-line');
+                path.setAttribute('marker-end', 'url(#arrowhead)');
+                path.setAttribute('data-from', arrow.from);
+                path.setAttribute('data-to', arrow.to);
+                path.setAttribute('stroke-dasharray', '5,5');
+
+                svg.appendChild(path);
+            });
+        }
+
+        // ============================================================================
+        // SCENARIO MANAGEMENT
+        // ============================================================================
+
+        function loadScenario(scenarioKey) {
+            currentScenario = scenarioKey;
+            currentStep = 0;
+            const scenario = SCENARIOS[scenarioKey];
+
+            document.getElementById('stepTotal').textContent = scenario.path.length;
+
+            resetFlow();
+            updateStepDisplay();
+        }
+
+        function nextStep() {
+            const scenario = SCENARIOS[currentScenario];
+            if (currentStep < scenario.path.length - 1) {
+                currentStep++;
+                updateStepDisplay();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateStepDisplay();
+            }
+        }
+
+        function resetFlow() {
+            currentStep = 0;
+            updateStepDisplay();
+        }
+
+        function updateStepDisplay() {
+            const scenario = SCENARIOS[currentScenario];
+            const path = scenario.path;
+
+            // Update step counter
+            document.getElementById('stepNum').textContent = currentStep + 1;
+
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === path.length - 1;
+
+            // Reset all nodes
+            document.querySelectorAll('.node').forEach(node => {
+                node.classList.remove('active', 'completed', 'highlighted');
+            });
+
+            // Reset all arrows
+            document.querySelectorAll('.arrow-line, .arrow-head').forEach(el => {
+                el.classList.remove('active', 'highlighted');
+            });
+
+            // Highlight current step
+            const currentNodeId = 'node-' + path[currentStep];
+            const currentNode = document.getElementById(currentNodeId);
+            if (currentNode) {
+                currentNode.classList.add('active');
+            }
+
+            // Mark completed steps
+            for (let i = 0; i < currentStep; i++) {
+                const nodeId = 'node-' + path[i];
+                const node = document.getElementById(nodeId);
+                if (node) {
+                    node.classList.add('completed');
+                }
+            }
+
+            // Highlight active arrows
+            if (currentStep > 0) {
+                const fromNodeId = path[currentStep - 1];
+                const toNodeId = path[currentStep];
+
+                document.querySelectorAll('.arrow-line').forEach(line => {
+                    if (line.dataset.from === fromNodeId && line.dataset.to === toNodeId) {
+                        line.classList.add('active');
+                        line.setAttribute('marker-end', 'url(#arrowhead-active)');
+                    }
+                });
+            }
+        }
+
+        // ============================================================================
+        // MODAL
+        // ============================================================================
+
+        function openModal(nodeId) {
+            const data = COMPONENT_DATA[nodeId];
+            if (!data) return;
+
+            document.getElementById('modalIcon').textContent = data.icon;
+            document.getElementById('modalTitle').textContent = data.title;
+
+            // Build manager content
+            const managerContent = `
+                <div class="tab-content active" id="manager-content">
+                    <div class="info-section">
+                        <h3>What is ${data.title}?</h3>
+                        <p>${data.manager.what}</p>
+                    </div>
+                    <div class="info-section">
+                        <h3>What does it do?</h3>
+                        <p>${data.manager.does}</p>
+                    </div>
+                    <div class="info-section">
+                        <h3>Examples:</h3>
+                        <div class="example-list">
+                            ${data.manager.examples.map(ex => `<div class="example-item">${ex}</div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="info-section">
+                        <h3>💼 Business Value:</h3>
+                        <div class="highlight-box">
+                            <strong>${data.manager.value}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Build technical content
+            let technicalContent = `
+                <div class="tab-content" id="technical-content">
+                    <div class="info-section">
+                        <h3>Architecture</h3>
+                        <p><strong>Type:</strong> ${data.technical.architecture}</p>
+                        <p><strong>Implementation:</strong> ${data.technical.implementation}</p>
+                    </div>
+            `;
+
+            if (data.technical.flow) {
+                technicalContent += `
+                    <div class="info-section">
+                        <h3>Flow</h3>
+                        <div class="example-list">
+                            ${data.technical.flow.map(step => `<div class="example-item">${step}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (data.technical.metrics) {
+                technicalContent += `
+                    <div class="info-section">
+                        <h3>Performance Metrics</h3>
+                        <div class="metric-box">
+                            ${Object.entries(data.technical.metrics).map(([key, val]) => `
+                                <div class="metric-item">
+                                    <div class="metric-label">${key}</div>
+                                    <div class="metric-value">${val}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (data.technical.code) {
+                technicalContent += `
+                    <div class="info-section">
+                        <h3>Code Example</h3>
+                        <div class="code-block">${escapeHtml(data.technical.code)}</div>
+                    </div>
+                `;
+            }
+
+            if (data.technical.tools) {
+                technicalContent += `
+                    <div class="info-section">
+                        <h3>Available Tools</h3>
+                        ${data.technical.tools.map(tool => `
+                            <div class="highlight-box">
+                                <strong>${tool.name}</strong><br>
+                                ${Object.entries(tool).filter(([k]) => k !== 'name').map(([k, v]) =>
+                                    `${k}: ${v}`
+                                ).join(' | ')}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            technicalContent += `</div>`;
+
+            document.getElementById('modalBody').innerHTML = managerContent + technicalContent;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================================
+        // START
+        // ============================================================================
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
