@@ -2,6 +2,15 @@
 
 A powerful integration combining LangChain, Ollama, and a Model Control Plane (MCP) server with multiple intelligent tools.
 
+## 📖 Documentation Quick Links
+
+- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 2 minutes (START HERE!)
+- **[RUN_INSTRUCTIONS.md](RUN_INSTRUCTIONS.md)** - Detailed troubleshooting guide
+- **[RAG_README.md](RAG_README.md)** - Document search and RAG system
+- **[WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)** - Web interface guide
+
+> **⚠️ Getting "Connection closed" error?** See [QUICKSTART.md](QUICKSTART.md) - it's a Python 3.13 issue with an easy fix!
+
 ## Features
 
 - **LangChain Integration**: Leverages LangChain for building LLM applications
@@ -76,10 +85,12 @@ A powerful integration combining LangChain, Ollama, and a Model Control Plane (M
 
 ## Prerequisites
 
-1. **Python 3.9+**
+1. **Python 3.9-3.12** (⚠️ Python 3.13 has compatibility issues - use 3.11 or 3.12)
 2. **Ollama** installed and running
    - Install from: https://ollama.ai/
    - Pull a model: `ollama pull llama3.2`
+
+> **⚠️ IMPORTANT**: If you encounter "Connection closed" errors, you're likely using Python 3.13. Please see [QUICKSTART.md](QUICKSTART.md) for solutions.
 
 ## Installation
 
@@ -107,9 +118,17 @@ ollama list
 
 ## Usage
 
-### Quick Start
+### 🚀 Quick Start (2 Minutes)
 
-Run the main application:
+**Having issues? See [QUICKSTART.md](QUICKSTART.md) for fast solutions!**
+
+**Recommended: Use the Web Interface**
+```bash
+python web_server.py
+```
+Then open: **http://localhost:5000**
+
+**Alternative: Command-Line Interface**
 ```bash
 python main.py
 ```
@@ -117,6 +136,8 @@ python main.py
 Choose from:
 1. **Interactive Mode**: Ask questions in real-time
 2. **Demo Mode**: See pre-configured examples
+
+> **Note**: If you get "Connection closed" error, you're using Python 3.13. Use the web interface or see [RUN_INSTRUCTIONS.md](RUN_INSTRUCTIONS.md) for detailed troubleshooting.
 
 ### Interactive Mode
 
