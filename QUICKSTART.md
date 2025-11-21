@@ -1,6 +1,10 @@
 # Quick Start - Get Running in 2 Minutes
 
-## The Problem You're Facing
+## 🎯 SOLUTION: Use the Fixed Version!
+
+We've created a **fixed version** that works perfectly with Python 3.13!
+
+## The Problem
 
 You're seeing this error:
 ```
@@ -9,29 +13,37 @@ mcp.shared.exceptions.McpError: Connection closed
 
 This is a **Python 3.13 compatibility issue** with the MCP server subprocess communication.
 
-## The Solution - Use the Web Interface
+## ✅ The Fix (Choose One)
 
-The web interface works better and is more stable. Here's how:
+### Option 1: Use the Fixed CLI (Recommended)
 
-### 1. Make Sure Ollama is Running ✅
-
-You already verified this works:
+**Step 1: Run the diagnostic tool**
 ```powershell
-ollama run llama3.2 "Say hello"
-# Output: Hello!
+python debug_mcp.py
 ```
 
-### 2. Run the Web Server
+This tells you exactly what's working and what isn't.
+
+**Step 2: Run the fixed version**
+```powershell
+python main_fixed.py
+```
+
+That's it! This version:
+- ✅ Works with Python 3.13
+- ✅ No subprocess issues
+- ✅ All tools work (calculator, weather, gold price, email, RAG)
+- ✅ Same features as original
+
+### Option 2: Use the Web Interface
 
 ```powershell
 python web_server.py
 ```
 
-### 3. Open Your Browser
+Then open: **http://localhost:5000**
 
-Go to: **http://localhost:5000**
-
-That's it! The web interface bypasses the subprocess issues.
+The web interface is also very stable.
 
 ## What You Can Do
 

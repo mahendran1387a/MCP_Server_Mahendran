@@ -5,11 +5,12 @@ A powerful integration combining LangChain, Ollama, and a Model Control Plane (M
 ## 📖 Documentation Quick Links
 
 - **[QUICKSTART.md](QUICKSTART.md)** - Get running in 2 minutes (START HERE!)
+- **[PYTHON313_FIX.md](PYTHON313_FIX.md)** - 🔧 Python 3.13 fix + debug script
 - **[RUN_INSTRUCTIONS.md](RUN_INSTRUCTIONS.md)** - Detailed troubleshooting guide
 - **[RAG_README.md](RAG_README.md)** - Document search and RAG system
 - **[WEB_FRONTEND_README.md](WEB_FRONTEND_README.md)** - Web interface guide
 
-> **⚠️ Getting "Connection closed" error?** See [QUICKSTART.md](QUICKSTART.md) - it's a Python 3.13 issue with an easy fix!
+> **🔧 Using Python 3.13?** See [PYTHON313_FIX.md](PYTHON313_FIX.md) for the fixed version that works perfectly!
 
 ## Features
 
@@ -120,24 +121,37 @@ ollama list
 
 ### 🚀 Quick Start (2 Minutes)
 
-**Having issues? See [QUICKSTART.md](QUICKSTART.md) for fast solutions!**
+**Step 1: Run the debug script to check your setup**
+```bash
+python debug_mcp.py
+```
 
-**Recommended: Use the Web Interface**
+**Step 2: Choose your version based on Python:**
+
+#### For Python 3.13 (Fixed Version):
+```bash
+python main_fixed.py
+```
+✅ Works perfectly with Python 3.13 - no subprocess issues!
+
+#### For Python 3.11/3.12 (Original Version):
+```bash
+python main.py
+```
+
+#### Or Use the Web Interface (Works with all versions):
 ```bash
 python web_server.py
 ```
 Then open: **http://localhost:5000**
 
-**Alternative: Command-Line Interface**
-```bash
-python main.py
-```
-
 Choose from:
 1. **Interactive Mode**: Ask questions in real-time
 2. **Demo Mode**: See pre-configured examples
 
-> **Note**: If you get "Connection closed" error, you're using Python 3.13. Use the web interface or see [RUN_INSTRUCTIONS.md](RUN_INSTRUCTIONS.md) for detailed troubleshooting.
+> **🔧 Python 3.13 Users**: Use `main_fixed.py` or see [PYTHON313_FIX.md](PYTHON313_FIX.md) for complete details.
+>
+> **📊 Diagnostic Tool**: Run `python debug_mcp.py` to test all components and get personalized recommendations.
 
 ### Interactive Mode
 
