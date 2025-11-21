@@ -1,11 +1,12 @@
 """
 Async Client Manager for MCP clients in Flask
 Manages client lifecycle properly in a background event loop
+FIXED VERSION: Uses Python 3.13 compatible client
 """
 import asyncio
 import threading
 from typing import Dict, Optional
-from langchain_mcp_client import LangChainMCPClient
+from langchain_mcp_client_fixed import LangChainMCPClientFixed
 
 
 class AsyncClientManager:
@@ -14,7 +15,7 @@ class AsyncClientManager:
     def __init__(self):
         self.loop = None
         self.loop_thread = None
-        self.clients: Dict[str, LangChainMCPClient] = {}
+        self.clients: Dict[str, LangChainMCPClientFixed] = {}
         self.client_lock = threading.Lock()
         self._start_background_loop()
 
@@ -34,7 +35,7 @@ class AsyncClientManager:
 
     async def _create_client(self, session_id: str, model_name: str = "llama3.2"):
         """Create and initialize a client (runs in background loop)"""
-        client = LangChainMCPClient(model_name=model_name)
+        client = LangChainMCPClientFixed(model_name=model_name)
         await client.initialize()
         self.clients[session_id] = client
         return client
