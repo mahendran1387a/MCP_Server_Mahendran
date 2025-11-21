@@ -18,6 +18,7 @@ class Colors:
     BLUE = '\033[94m'
     RESET = '\033[0m'
     BOLD = '\033[1m'
+    INFO = '\033[94m'  # Same as BLUE
 
 
 def print_header(text):
